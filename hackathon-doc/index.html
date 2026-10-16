@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>薄肌计划 BojiPlan · 黑客松作品介绍</title>
+<style>
+:root{--bg:#0B0F14;--card:#131B26;--line:#1F2B3A;--txt:#E6EEF7;--sub:#8CA0B5;--sub2:#5B6E84;--acc:#A6FF3F;--cyan:#22D3EE;--violet:#A78BFA;--orange:#FB923C}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","MiSans","Noto Sans SC","Microsoft YaHei",sans-serif;line-height:1.8}
+.wrap{max-width:860px;margin:0 auto;padding:48px 24px 80px}
+.hero{text-align:center;padding:44px 20px 36px;background:linear-gradient(160deg,rgba(166,255,63,.08),rgba(34,211,238,.05));border:1px solid var(--line);border-radius:24px;margin-bottom:36px}
+.hero .bot{font-size:44px;margin-bottom:10px}
+.hero h1{font-size:32px;font-weight:800;letter-spacing:1px}
+.hero h1 span{color:var(--acc)}
+.hero .slogan{color:var(--cyan);font-size:15px;font-weight:600;margin-top:10px}
+.hero .one{color:var(--sub);font-size:13.5px;margin-top:14px;max-width:560px;margin-left:auto;margin-right:auto}
+.hero .meta{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.hero .meta span{font-size:11px;font-weight:700;color:var(--sub);background:var(--card);border:1px solid var(--line);padding:5px 12px;border-radius:999px}
+h2{font-size:21px;font-weight:800;margin:44px 0 18px;padding-left:14px;border-left:4px solid var(--acc)}
+h3{font-size:16px;font-weight:700;margin:26px 0 12px;color:var(--cyan)}
+p{font-size:14px;color:var(--sub);margin-bottom:12px}
+p b,li b{color:var(--txt)}
+ul,ol{margin:0 0 14px 22px}
+li{font-size:14px;color:var(--sub);margin-bottom:7px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:14px}
+.card h4{font-size:14.5px;font-weight:700;color:var(--txt);margin-bottom:8px}
+.card p{margin-bottom:0;font-size:13.5px}
+table{width:100%;border-collapse:collapse;margin:12px 0 18px;font-size:13px}
+th{background:var(--card2,#182231);color:var(--txt);text-align:left;padding:10px 12px;border:1px solid var(--line);font-weight:700;white-space:nowrap}
+td{padding:9px 12px;border:1px solid var(--line);color:var(--sub);vertical-align:top}
+td b{color:var(--txt)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:rgba(34,211,238,.1);color:var(--cyan);padding:2px 7px;border-radius:6px}
+pre{background:#0E141C;border:1px solid var(--line);border-radius:12px;padding:16px;overflow-x:auto;margin:12px 0 18px;font-size:12px;line-height:1.7;color:var(--sub)}
+pre code{background:none;color:inherit;padding:0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+@media(max-width:640px){.grid{grid-template-columns:1fr}}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:999px;background:rgba(166,255,63,.12);color:var(--acc);margin-right:6px}
+.arch{background:#0E141C;border:1px solid var(--line);border-radius:14px;padding:20px;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.75;color:var(--sub);overflow-x:auto;white-space:pre}
+.footer{text-align:center;color:var(--sub2);font-size:12px;margin-top:52px;line-height:2}
+.note{background:rgba(255,176,32,.07);border:1px solid rgba(255,176,32,.25);border-radius:12px;padding:12px 16px;font-size:12.5px;color:var(--sub);margin:14px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hero">
+  <div class="bot">🦾</div>
+  <h1>薄肌计划 <span>BojiPlan</span></h1>
+  <div class="slogan">碳基服务器，AI 掌舵</div>
+  <div class="one">把一场 5 小时访谈里的流行认知体系，变成一个每天替你盯着身体、资产、决策的 AI Agent。</div>
+  <div class="meta">
+    <span>🤖 机器人：小薄（可改名）</span>
+    <span>🧠 模型：step-5-preview</span>
+    <span>📱 安卓 App + 网页同源</span>
+    <span>🔒 数据全在本机 · 零后端</span>
+  </div>
+</div>
+
+<h2>一、作品名称</h2>
+<div class="card">
+  <h4>薄肌计划 BojiPlan</h4>
+  <p><b>名字由来</b>：项目起点是孙宇晨 × 邵艾伦那场 5 小时访谈里的一套「网红理论体系」——薄肌（身体底层资产）、搏击（动态神经资产）、大水、大睡、先开图再出兵、先自由后财富、少消费多创造。我们把这套只存在于切片视频里的认知，产品化成一个真正每天在用的 Agent。</p>
+</div>
+
+<h2>二、核心功能</h2>
+
+<div class="grid">
+<div class="card"><h4>💬 AI 掌舵对话</h4><p>背后是真实大模型（默认 step-5-preview，模型列表动态拉取）。系统提示词持续注入记忆/身体/健康/今日数据——它真的认识你。问到时效性问题自主调用 StepSearch，末尾附来源卡片。流式输出，思维链实时可见。</p></div>
+<div class="card"><h4>📊 每日打卡与碳基服务器</h4><p>饮水/睡眠/搏击/薄肌/创造五类打卡，四个指标环 + AI 掌舵日报（按数据差距给行动建议）+ 服务器负载率 + 近 7 日睡眠图。</p></div>
+<div class="card"><h4>🩺 健康模块</h4><p>上传体检报告（拍照/相册）→ AI 视觉通读 → 身体状况总结 + 异常/疾病清单（名称/系统/等级/指标）。身体数据快照：身高/体重/体脂，自动 BMI 分级，双轴曲线，历史可编辑。</p></div>
+<div class="card"><h4>💰 资产模块</h4><p>只记「某一时刻的总资产/总负债」两个数字，三条曲线（总资产/总负债/净资产）按快照时间绘制，支持编辑任意历史快照。</p></div>
+<div class="card"><h4>🗓️ 一周训练计划（招牌）</h4><p>先输入器械条件 → AI 结合身体数据 + 薄肌目标 + 搏击/大睡理论生成 7 天计划，详细到组数×次数、组间休息秒数、退阶选项。器械硬约束：无搏击条件绝不排搏击。生成后固定，默认折叠，可编辑。</p></div>
+<div class="card"><h4>🧠 记忆页 + ⏳ 生命倒计时</h4><p>长期记忆库（分类/搜索）、饮食记录（自动带时间）、备忘录（待办勾选）。我的页：生日 + 预期寿命 → 剩余天数 + 时:分:秒秒级跳动 + 人生进度条。</p></div>
+</div>
+
+<h2>三、技术方案与实现思路</h2>
+
+<h3>3.1 整体架构</h3>
+<div class="arch">┌──────────────────────────────────────────────┐
+│ 安卓 App（WebView 壳，Gradle 工程）              │
+│  WebViewAssetLoader → https://appassets...     │
+│  └── 单文件 Web App（HTML/CSS/JS，零依赖）       │
+└──────────────┬───────────────────────────────┘
+               │ HTTPS（已实测 api.stepfun.com 允许浏览器跨域）
+               ▼
+┌──────────────────────────────────────────────┐
+│ StepFun 开放平台（OpenAI 兼容）                  │
+│  · /v1/chat/completions  对话/计划生成/视觉理解   │
+│  · /v1/search            StepSearch 联网搜索    │
+│  · /v1/models            动态模型列表            │
+└──────────────────────────────────────────────┘
+数据持久化：localStorage（全在本机，零后端）</div>
+<p><b>为什么零后端</b>：个人 Agent 的敏感数据（体检报告、资产、健康）不应出本机；StepFun API 允许跨域直连，使纯前端方案成立。安卓壳只做容器（文件选择/拍照/返回键），业务逻辑全在 Web 层，改网页一条命令重新出包。</p>
+
+<h3>3.2 AI 掌舵 = 系统提示词工程</h3>
+<p>每次请求动态组装六层上下文：① 机器人身份与人设 ② 理论底座（搏击/大水/大睡/先开图再出兵/先自由后财富/少消费多创造）③ 用户资料 ④ 今日实时数据 ⑤ 长期记忆（最近 25 条）⑥ 健康档案 + 最新身体快照。再加两条行为规则：<b>长期记忆提炼协议</b>与<b>联网搜索触发规则</b>（时效性问题才检索，打卡闲聊不检索，避免浪费 token 和延迟）。</p>
+
+<h3>3.3 自研轻量「AI 结构化输出协议」</h3>
+<p>让模型以约定标记行输出结构化数据，前端解析后自动入库、标记不展示给用户：</p>
+<table>
+<tr><th>标记</th><th>用途</th><th>现状</th></tr>
+<tr><td><code>[[MEMORY:分类|内容]]</code></td><td>对话中提炼长期记忆（职业/目标/习惯/偏好/关系/决定）</td><td><span class="tag">已启用</span>默认开，可关</td></tr>
+<tr><td><code>[[BODY:身高|体重|体脂]]</code></td><td>自动记身体快照</td><td>已关闭（改手动，防误记）</td></tr>
+<tr><td><code>[[SNAPSHOT:资产|负债]]</code></td><td>自动记资产快照</td><td>已关闭（改手动，防误记）</td></tr>
+</table>
+<p><b>价值</b>：不用向量数据库、不用后端，靠「系统提示 + 标记协议 + 前端解析」实现 Agent 持久记忆，去重、分类、展示全部本地完成。</p>
+
+<h3>3.4 Function Calling：StepSearch 工具循环</h3>
+<p>官方文档明确 step-5-preview 不支持 Chat Completions 内置 <code>web_search</code> 工具类型，推荐把 <code>/v1/search</code> 封装成自定义 function 工具。我们实现了完整的迷你 Agent 循环：</p>
+<pre><code>第 1 轮请求（带 tools 定义）
+  → 模型返回 tool_calls{query}
+  → App 显示「🔍 正在联网搜索」并请求 /v1/search
+  → 结果作为 tool 消息追加进 messages
+第 2 轮请求（不带 tools，防循环）
+  → 模型基于真实检索结果流式回答 + 来源卡片</code></pre>
+<p>流式场景下 tool_calls 按 index 分片到达，写了增量累加解析；失败时把错误作为 tool 结果回传，模型自然降级回答，不会卡死。</p>
+
+<h3>3.5 多模态：体检报告视觉解读</h3>
+<p>相册/拍照 → canvas 压缩到 1600px JPEG → <code>image_url</code> 多部分消息 → 要求只输出 JSON（summary + items）。解析四层容错：剥离代码块 → 首尾大括号切片 → JSON.parse → <b>散文/markdown 兜底解析</b>，外加失败自动重试一次。</p>
+
+<h3>3.6 对推理模型的工程适配（踩坑全集）</h3>
+<table>
+<tr><th>问题</th><th>现象</th><th>解法</th></tr>
+<tr><td>思维链吃 token</td><td>设 max_tokens 会截断回答/返回空</td><td><b>不设 max_tokens</b>（官方默认 INF）</td></tr>
+<tr><td>生成等待久且无反馈</td><td>10 分钟不知道卡没卡</td><td><b>全链路流式</b>：思维链 💭 与正文分开滚动 + 秒数/字符数 + 45s 提示 + 可取消</td></tr>
+<tr><td>结构化任务想太久</td><td>计划生成动辄数分钟</td><td><code>reasoning_effort: low</code>（400 不支持自动去参重试）</td></tr>
+<tr><td>连通性测试误判</td><td>小 max_tokens 被思维链吃光返回空</td><td>探针 <code>max_tokens: 1</code>，<b>HTTP 200 即成功</b></td></tr>
+<tr><td>输出被截断</td><td>JSON 不完整解析失败</td><td>去上限 + 自动重试 + 兜底解析</td></tr>
+</table>
+
+<h3>3.7 图表全部手写 SVG</h3>
+<p>指标环、近 7 日睡眠柱状图、资产三线曲线、身体数据<b>双轴曲线</b>（左轴 kg / 右轴 %）、人生进度条——零图表库，直接生成 SVG path，单文件交付。</p>
+
+<h3>3.8 安卓壳关键实现</h3>
+<ul>
+<li><code>WebViewAssetLoader</code> 把 assets 以 <code>https://appassets.androidplatform.net/</code> 提供（合法 https origin，canvas/存储全正常，避开 file:// 的坑）</li>
+<li><code>onShowFileChooser</code> 实现相册 + 拍照（FileProvider 授权，运行时申请相机权限）</li>
+<li>系统返回键先问页面（<code>window.__bojiBack</code> 关弹窗），再走 WebView 历史</li>
+<li>UA 追加 <code>BojiPlanApp</code>，网页自动隐藏模拟状态栏融入真机</li>
+<li>Gradle 8.7 + AGP 8.5.2 + JDK 17 + SDK 34，minSdk 26</li>
+</ul>
+
+<h2>四、作品创新点</h2>
+<div class="card"><h4>1. 「访谈理论产品化」</h4><p>不复制又一个聊天机器人，而是把一套具体的认知体系变成每日可执行的打卡、计划和决策框架——理论直接约束 AI 输出（如"没有搏击条件就绝不排搏击"）。</p></div>
+<div class="card"><h4>2. 零基础设施的 Agent 长期记忆</h4><p>不用向量库/后端，用「系统提示注入 + 标记协议 + 前端解析」实现持久记忆与自动提炼，个人敏感数据全留本机。</p></div>
+<div class="card"><h4>3. 器械约束的计划生成</h4><p>生成前先采集用户实际器械条件并写入硬性约束，解决"AI 计划很美但没法执行"的经典问题；计划详细到组数×次数+组间休息秒数+退阶选项，默认折叠只显示概要。</p></div>
+<div class="card"><h4>4. 快照式资产管理</h4><p>拒绝流水账，只记"某一时刻的总资产/总负债"，用三线曲线看净值演变——更贴合个人真实管理习惯。</p></div>
+<div class="card"><h4>5. 生命倒计时作为产品骨架</h4><p>预期寿命设定 + 天/秒级倒计时 + 人生进度条，把"时间有限"变成使用产品的底层驱动，与"先自由后财富"形成呼应。</p></div>
+<div class="card"><h4>6. 推理模型的完整工程适配</h4><p>流式思维链可视化、思考强度分场景调控、探针式连通性测试、截断容错、参数回退——这套经验可直接复用到任何基于 Step 推理模型的应用。</p></div>
+<div class="card"><h4>7. 单文件零依赖 + 安卓壳</h4><p>整个业务是一个 HTML 文件，改完一条命令出 APK，交付和迭代成本极低。</p></div>
+
+<h2>五、Step 模型使用情况</h2>
+<table>
+<tr><th>能力</th><th>用法</th><th>用在哪里</th></tr>
+<tr><td><b>step-5-preview（主力）</b></td><td>Chat Completions，OpenAI 兼容</td><td>所有对话、训练计划生成、体检报告解读</td></tr>
+<tr><td>流式输出（SSE）</td><td><code>stream: true</code>，自研 SSE 帧解析器</td><td>对话打字机效果、生成进度可视化</td></tr>
+<tr><td>Function Calling</td><td><code>tools:[{type:"function"}]</code> + tool 消息回传</td><td>StepSearch 联网搜索（两轮工具循环）</td></tr>
+<tr><td>多模态（视觉）</td><td><code>image_url</code> 多部分消息 + 前端图片压缩</td><td>体检报告 AI 总结疾病/异常</td></tr>
+<tr><td>StepSearch 搜索</td><td><code>POST /v1/search</code>（官方推荐的 function 工具方案，与 StepSearch MCP Server 同后端）</td><td>时效性问题实时检索 + 来源引用</td></tr>
+<tr><td>模型目录</td><td><code>GET /v1/models</code> 动态拉取，过滤非对话模型，6 小时缓存</td><td>模型选择弹层（失败回退内置列表）</td></tr>
+<tr><td>推理参数适配</td><td>不设 <code>max_tokens</code>；结构化任务 <code>reasoning_effort: low</code>；<code>temperature: 0.3</code></td><td>计划生成 / 体检解读</td></tr>
+<tr><td>错误处理</td><td>401/402/400 分类中文提示；参数不支持自动回退；解析失败自动重试</td><td>全链路</td></tr>
+</table>
+<div class="note">💡 <b>适配结论</b>：step-5-preview 作为推理模型，在 Agent 场景下的关键不是"会不会用"，而是<b>工程适配</b>——思维链分流渲染、思考强度分场景调控、连通性探针、截断容错，这些构成了项目里"Step 模型使用情况"的核心含量。</div>
+
+<h2>六、路演演示脚本（建议 5 分钟）</h2>
+<ol>
+<li><b>开场（30s）</b>：展示生命倒计时——"你的 AI 知道你还能自由支配多少天"。</li>
+<li><b>理论落地（1min）</b>：掌舵页打卡 + AI 日报："它按搏击理论和大睡理论给我今天的建议"。</li>
+<li><b>招牌功能（2min）</b>：训练计划生成——先填器械（"无搏击条件"）→ 看思维链滚动 → 30 秒拿到写到组间休息秒数的 7 天计划 → 点开周二展开动作 → 手动改一个动作。</li>
+<li><b>多模态（45s）</b>：上传一张体检报告照片 → AI 输出疾病清单和分级。</li>
+<li><b>联网搜索（30s）</b>：问一个今天的新闻 → 看它自己决定搜索 → 附来源回答。</li>
+<li><b>收尾（15s）</b>：资产三线曲线 + "数据全在你手机里，零后端"。</li>
+</ol>
+
+<h2>七、数据与隐私</h2>
+<ul>
+<li>所有个人数据（API Key、记忆、打卡、体检、资产、身体、计划）仅存于设备 localStorage / WebView 本地存储</li>
+<li>无自建服务器、无数据上报；卸载即清除</li>
+<li>API Key 由用户自行在 StepFun 开放平台创建，直连官方接口</li>
+</ul>
+
+<div class="footer">
+  薄肌计划 BojiPlan · 基于阶跃星辰 StepCode（step-5-preview）构建<br>
+  理论出处：孙宇晨 × 邵艾伦 5 小时访谈（观点合集，非投资/医学建议）
+</div>
+
+</div>
+</body>
+</html>

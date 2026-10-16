@@ -1,0 +1,44 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.boji.plan'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.boji.plan"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+/* 本机构建环境无 Maven Central 访问：把 kotlin 系依赖强制到本地缓存已有版本 */
+configurations.all {
+    resolutionStrategy {
+        force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.24'
+        force 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+        force 'org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.7.3'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.20'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.20'
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.webkit:webkit:1.12.1'
+}

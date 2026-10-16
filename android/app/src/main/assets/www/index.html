@@ -1,0 +1,2735 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0B0F14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>薄肌计划 · AI掌舵Agent</title>
+<style>
+:root{
+  --bg:#0B0F14; --bg2:#0E141C; --card:#131B26; --card2:#182231;
+  --line:#1F2B3A; --line2:#27374B;
+  --txt:#E6EEF7; --sub:#8CA0B5; --sub2:#5B6E84;
+  --acc:#A6FF3F; --acc-dim:rgba(166,255,63,.14); --cyan:#22D3EE; --violet:#A78BFA;
+  --orange:#FB923C; --warn:#FFB020; --bad:#FF5C5C;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:#04060A; color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans SC","MiSans","Noto Sans SC","Microsoft YaHei",sans-serif;
+  display:grid; place-items:center; min-height:100dvh; overflow:hidden;
+}
+button{font-family:inherit;border:none;background:none;color:inherit;cursor:pointer}
+input,textarea,select{font-family:inherit;outline:none}
+::-webkit-scrollbar{width:0;height:0}
+
+/* ============ 手机外框 ============ */
+#phone{
+  position:relative; width:100%; max-width:430px; height:100dvh;
+  background:var(--bg); display:flex; flex-direction:column; overflow:hidden;
+}
+@media(min-width:520px){
+  #phone{height:min(94dvh,920px); border-radius:44px; border:1px solid #232F3F;
+    box-shadow:0 40px 120px rgba(0,0,0,.75), 0 0 0 10px #0a0d12, 0 0 0 11px #1a2432;}
+}
+#deskNote{display:none}
+@media(min-width:520px){
+  #deskNote{display:block;position:fixed;left:24px;bottom:20px;max-width:250px;color:var(--sub2);
+    font-size:12px;line-height:1.7;border-left:2px solid var(--line2);padding-left:12px}
+}
+
+/* ============ 状态栏 ============ */
+#statusbar{
+  height:34px; flex:none; display:flex; align-items:center; justify-content:space-between;
+  padding:0 22px; font-size:13px; font-weight:600; color:var(--txt);
+  padding-top:env(safe-area-inset-top);
+}
+#sbRight{display:flex;align-items:center;gap:6px}
+#sbRight svg{display:block}
+
+/* ============ 顶栏 ============ */
+#appHeader{
+  flex:none; height:58px; display:flex; align-items:center; gap:10px;
+  padding:0 14px; border-bottom:1px solid var(--line); background:rgba(14,20,28,.92);
+  backdrop-filter:blur(8px); z-index:20;
+}
+.botFace{width:38px;height:38px;flex:none;position:relative}
+.botFace svg{width:100%;height:100%}
+.botFace.thinking{animation:bpulse 1s infinite}
+@keyframes bpulse{0%,100%{filter:drop-shadow(0 0 3px rgba(166,255,63,.4))}50%{filter:drop-shadow(0 0 10px rgba(166,255,63,.9))}}
+.eyes{animation:blink 4.2s infinite; transform-origin:32px 30px}
+@keyframes blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+#hTitle{flex:1;min-width:0}
+#hName{font-size:15px;font-weight:700;display:flex;align-items:center;gap:6px}
+#hStatus{font-size:11px;color:var(--sub);margin-top:2px;display:flex;align-items:center;gap:4px}
+.dotOnline{width:6px;height:6px;border-radius:50%;background:var(--acc);box-shadow:0 0 6px var(--acc)}
+#modelChip{
+  flex:none;display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+  background:var(--card2);border:1px solid var(--line2);color:var(--cyan);
+  padding:6px 10px;border-radius:999px;
+}
+#modelChip:active{transform:scale(.96)}
+
+/* ============ 主区 / Tab ============ */
+main{flex:1;position:relative;overflow:hidden}
+.tab{position:absolute;inset:0;overflow-y:auto;padding:14px 14px 96px;display:none}
+.tab.active{display:block}
+#tabChat.active{display:flex;flex-direction:column;padding:0;overflow:hidden}
+
+/* ============ 底部导航 ============ */
+#bottomNav{
+  position:absolute;left:0;right:0;bottom:0;z-index:30;
+  background:rgba(13,18,26,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);
+  padding:6px 8px calc(10px + env(safe-area-inset-bottom));
+  display:flex;
+}
+.navBtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:var(--sub2);font-size:10.5px;font-weight:600;transition:color .15s}
+.navBtn svg{width:23px;height:23px}
+.navBtn.on{color:var(--acc)}
+.navBtn.on svg{filter:drop-shadow(0 0 6px rgba(166,255,63,.5))}
+#gestureBar{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:110px;height:4px;border-radius:2px;background:#2A3A4E;z-index:31}
+
+/* ============ 聊天 ============ */
+#chatScroll{flex:1;overflow-y:auto;padding:14px 14px 10px;display:flex;flex-direction:column;gap:12px}
+.msg{display:flex;gap:8px;max-width:86%;animation:msgIn .25s ease}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.msg.user{align-self:flex-end;flex-direction:row-reverse}
+.msg .mAvatar{width:30px;height:30px;flex:none;margin-top:2px}
+.msg.user .mAvatar{display:none}
+.bubble{
+  background:var(--card);border:1px solid var(--line);border-radius:4px 16px 16px 16px;
+  padding:10px 13px;font-size:14px;line-height:1.65;color:var(--txt);word-break:break-word;
+}
+.msg.user .bubble{
+  background:linear-gradient(135deg,#C6FF5E,#8FE01E);color:#0A0F05;font-weight:500;
+  border:none;border-radius:16px 4px 16px 16px;
+}
+.bubble b{color:var(--acc)}
+.msg.user .bubble b{color:#0A0F05}
+.mTime{font-size:10px;color:var(--sub2);margin-top:4px}
+.msg.user .mTime{text-align:right}
+.qchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.qchip{font-size:12px;font-weight:600;color:var(--acc);background:var(--acc-dim);
+  border:1px solid rgba(166,255,63,.3);padding:5px 11px;border-radius:999px}
+.qchip:active{transform:scale(.95)}
+.typing{display:flex;gap:4px;padding:14px 16px}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--acc);animation:tp 1s infinite}
+.typing i:nth-child(2){animation-delay:.18s}.typing i:nth-child(3){animation-delay:.36s}
+@keyframes tp{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+.memTag{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--violet);
+  background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);padding:2px 7px;border-radius:999px;margin-top:7px}
+
+/* 输入区 */
+#composer{flex:none;padding:8px 12px calc(74px + env(safe-area-inset-bottom));background:rgba(13,18,26,.96);border-top:1px solid var(--line)}
+#quickRow{display:flex;gap:7px;overflow-x:auto;padding-bottom:9px}
+.quickC{flex:none;font-size:12px;font-weight:600;color:var(--sub);background:var(--card);
+  border:1px solid var(--line);padding:6px 12px;border-radius:999px;white-space:nowrap}
+.quickC:active{color:var(--acc);border-color:var(--acc)}
+#inputRow{display:flex;gap:9px;align-items:flex-end}
+#msgInput{flex:1;background:var(--card);border:1px solid var(--line2);border-radius:22px;
+  padding:11px 16px;font-size:14px;color:var(--txt);resize:none;max-height:100px;line-height:1.4}
+#msgInput:focus{border-color:rgba(166,255,63,.5)}
+#sendBtn{width:44px;height:44px;flex:none;border-radius:50%;background:linear-gradient(135deg,#C6FF5E,#8FE01E);
+  display:grid;place-items:center;box-shadow:0 4px 16px rgba(166,255,63,.3)}
+#sendBtn:active{transform:scale(.92)}
+#sendBtn svg{width:19px;height:19px}
+
+/* ============ 通用卡片 ============ */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r,16px);padding:14px;margin-bottom:12px}
+.cardTitle{font-size:13px;font-weight:700;color:var(--sub);display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.cardTitle .more{margin-left:auto;font-size:11px;color:var(--cyan);font-weight:600}
+.secTitle{font-size:12px;font-weight:700;color:var(--sub2);letter-spacing:1px;margin:18px 2px 9px}
+
+/* ============ 掌舵面板 ============ */
+#dashDate{font-size:20px;font-weight:800;margin:2px 0 12px}
+#dashDate span{font-size:12px;color:var(--sub);font-weight:500;margin-left:8px}
+.rings{display:flex;justify-content:space-between;gap:6px}
+.ringItem{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1}
+.ringItem svg{width:68px;height:68px}
+.ringBg{fill:none;stroke:#1C2735;stroke-width:7}
+.ringFg{fill:none;stroke-width:7;stroke-linecap:round;transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset .5s ease}
+.ringVal{fill:var(--txt);font-size:15px;font-weight:800;text-anchor:middle}
+.ringUnit{fill:var(--sub2);font-size:8px;text-anchor:middle}
+.ringLabel{font-size:11px;color:var(--sub);font-weight:600}
+#adviceList{display:flex;flex-direction:column;gap:9px}
+.adviceItem{display:flex;gap:9px;font-size:13px;line-height:1.55;align-items:flex-start}
+.adviceItem .aIcon{flex:none;width:24px;height:24px;border-radius:8px;display:grid;place-items:center;font-size:13px;background:var(--card2)}
+.adviceItem b{color:var(--acc)}
+#serverBox{display:flex;gap:13px;align-items:center}
+#serverBot{width:64px;height:64px;flex:none}
+#serverLoad{font-size:30px;font-weight:800;color:var(--acc);line-height:1}
+#serverTip{font-size:12px;color:var(--sub);line-height:1.6;margin-top:5px}
+.pill{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;margin-top:6px}
+.pill.ok{background:var(--acc-dim);color:var(--acc)}
+.pill.warn{background:rgba(255,176,32,.13);color:var(--warn)}
+.pill.bad{background:rgba(255,92,92,.13);color:var(--bad)}
+#weekChart{display:flex;align-items:flex-end;gap:8px;height:110px;padding-top:6px}
+.wBar{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end}
+.wFill{width:100%;max-width:26px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,var(--violet),#4C3F8F);min-height:4px;transition:height .4s}
+.wBar.today .wFill{background:linear-gradient(180deg,var(--acc),#5E9E0E);box-shadow:0 0 10px rgba(166,255,63,.35)}
+.wLab{font-size:10px;color:var(--sub2)}
+.wVal{font-size:10px;color:var(--sub);font-weight:700}
+#quickLogs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.qlBtn{background:var(--card2);border:1px solid var(--line);border-radius:13px;padding:11px 4px;
+  display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:var(--txt)}
+.qlBtn small{font-size:9.5px;color:var(--sub2);font-weight:500}
+.qlBtn:active{transform:scale(.95);border-color:var(--acc)}
+
+/* ============ 记忆库 ============ */
+#memStats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.statBox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 6px;text-align:center}
+.statBox .v{font-size:19px;font-weight:800;color:var(--acc)}
+.statBox .k{font-size:10.5px;color:var(--sub2);margin-top:2px}
+#memSummary{background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(34,211,238,.06));
+  border:1px solid rgba(167,139,250,.3)}
+#memSummary .sumTxt{font-size:12.5px;line-height:1.7;color:var(--txt)}
+#memSearchRow{display:flex;gap:8px;margin-bottom:10px}
+#memSearch{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 13px;font-size:13px;color:var(--txt)}
+#memFilters{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px}
+.memCard{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--acc);
+  border-radius:12px;padding:12px 13px;margin-bottom:9px;position:relative;animation:msgIn .25s ease}
+.memCard .mText{font-size:13.5px;line-height:1.6;padding-right:22px}
+.memMeta{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:10.5px;color:var(--sub2)}
+.memCat{font-weight:700;padding:2px 8px;border-radius:999px}
+.memDel{position:absolute;top:9px;right:9px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+  color:var(--sub2);font-size:14px;background:var(--card2)}
+.memDel:active{color:var(--bad)}
+.memStars{color:var(--warn);letter-spacing:1px}
+#memEmpty{text-align:center;color:var(--sub2);font-size:13px;padding:40px 0}
+#fabMem{position:absolute;right:16px;bottom:96px;width:50px;height:50px;border-radius:50%;z-index:25;
+  background:linear-gradient(135deg,#C6FF5E,#8FE01E);display:none;place-items:center;
+  box-shadow:0 8px 24px rgba(166,255,63,.35);font-size:24px;font-weight:300;color:#0A0F05}
+#fabAsset{position:absolute;right:16px;bottom:96px;width:50px;height:50px;border-radius:50%;z-index:25;
+  background:linear-gradient(135deg,#7DD3FC,#22D3EE);display:none;place-items:center;
+  box-shadow:0 8px 24px rgba(34,211,238,.35);font-size:24px;font-weight:300;color:#04222B}
+.fLabel{font-size:11.5px;color:var(--sub2);margin:9px 0 6px;font-weight:600}
+.srcCard{margin-top:9px;background:rgba(34,211,238,.06);border:1px solid rgba(34,211,238,.25);border-radius:12px;padding:10px 12px}
+.srcTitle{font-size:11px;font-weight:700;color:var(--cyan);margin-bottom:6px}
+.srcItem{font-size:11.5px;line-height:1.6;margin-bottom:5px}
+.srcItem a{color:var(--cyan);text-decoration:none;word-break:break-all}
+.srcSnip{font-size:10.5px;color:var(--sub2);margin-top:1px}
+#fabHealth{position:absolute;right:16px;bottom:96px;width:50px;height:50px;border-radius:50%;z-index:25;
+  background:linear-gradient(135deg,#FDA4AF,#FB7185);display:none;place-items:center;
+  box-shadow:0 8px 24px rgba(251,113,133,.35);font-size:24px;font-weight:300;color:#2B040D}
+.lvl{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px}
+.lvl-ok{background:rgba(139,149,165,.15);color:var(--sub)}
+.lvl-watch{background:rgba(255,176,32,.13);color:var(--warn)}
+.lvl-warn2{background:rgba(251,146,60,.15);color:var(--orange)}
+.lvl-bad{background:rgba(255,92,92,.13);color:var(--bad)}
+.healthItem{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;flex-wrap:wrap}
+.healthItem:last-child{border-bottom:none}
+.healthItem .hiName{font-weight:700}
+.healthItem .hiNote{font-size:11.5px;color:var(--sub2);margin-left:auto}
+
+/* ============ 我的 ============ */
+#meProfile{display:flex;gap:13px;align-items:center}
+#meBot{width:62px;height:62px;flex:none}
+#meName{font-size:18px;font-weight:800}
+#meSub{font-size:12px;color:var(--sub);margin-top:4px;line-height:1.5}
+.rowItem{display:flex;align-items:center;gap:11px;padding:13px 2px;border-bottom:1px solid var(--line);font-size:14px}
+.rowItem:last-child{border-bottom:none}
+.rowItem .rIcon{width:32px;height:32px;border-radius:10px;background:var(--card2);display:grid;place-items:center;font-size:16px;flex:none}
+.rowItem .rMain{flex:1;min-width:0}
+.rowItem .rSub{font-size:11px;color:var(--sub2);margin-top:2px}
+.rowItem .rVal{font-size:12px;color:var(--cyan);font-weight:700;flex:none}
+.toggle{width:44px;height:26px;border-radius:999px;background:#26344A;position:relative;transition:background .2s;flex:none}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#8494A8;transition:all .2s}
+.toggle.on{background:rgba(166,255,63,.3)}
+.toggle.on::after{left:21px;background:var(--acc);box-shadow:0 0 8px rgba(166,255,63,.6)}
+.seg{display:flex;background:var(--card2);border-radius:11px;padding:3px;gap:3px}
+.seg button{flex:1;font-size:11.5px;font-weight:700;color:var(--sub);padding:7px 2px;border-radius:8px}
+.seg button.on{background:var(--acc);color:#0A0F05}
+.theory{border:1px solid var(--line);border-radius:13px;margin-bottom:8px;overflow:hidden;background:var(--card)}
+.theory summary{padding:12px 13px;font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none}
+.theory summary::-webkit-details-marker{display:none}
+.theory summary .tTag{font-size:9.5px;font-weight:700;color:var(--cyan);background:rgba(34,211,238,.1);
+  border:1px solid rgba(34,211,238,.3);padding:2px 7px;border-radius:999px;flex:none}
+.theory summary .tArrow{margin-left:auto;color:var(--sub2);transition:transform .2s;font-size:11px}
+.theory[open] summary .tArrow{transform:rotate(90deg)}
+.theory .tBody{padding:0 13px 13px;font-size:12.5px;line-height:1.75;color:var(--sub)}
+.apiRow{display:flex;gap:8px;margin-top:9px}
+.apiRow input{flex:1;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:12px;color:var(--txt)}
+.miniBtn{font-size:12px;font-weight:700;color:var(--acc);background:var(--acc-dim);
+  border:1px solid rgba(166,255,63,.35);padding:9px 14px;border-radius:10px;flex:none}
+.miniBtn.ghost{color:var(--sub);background:var(--card2);border-color:var(--line)}
+.miniBtn.danger{color:var(--bad);background:rgba(255,92,92,.1);border-color:rgba(255,92,92,.3)}
+#aboutVer{text-align:center;font-size:11px;color:var(--sub2);line-height:1.8;padding:14px 20px 4px}
+
+/* ============ 底部弹层 / 模态 ============ */
+#sheetMask{position:absolute;inset:0;background:rgba(4,6,10,.7);z-index:40;opacity:0;pointer-events:none;transition:opacity .22s}
+#sheetMask.show{opacity:1;pointer-events:auto}
+#sheet{position:absolute;left:0;right:0;bottom:0;z-index:41;background:var(--bg2);
+  border-radius:24px 24px 0 0;border-top:1px solid var(--line2);
+  transform:translateY(105%);transition:transform .28s cubic-bezier(.2,.9,.3,1);
+  max-height:78%;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
+#sheet.show{transform:none}
+#sheetHead{padding:16px 18px 10px;font-size:15px;font-weight:800;display:flex;align-items:center}
+#sheetHead .x{margin-left:auto;color:var(--sub2);font-size:18px;padding:4px 8px}
+#sheetBody{overflow-y:auto;padding:4px 18px 22px}
+.modelRow{display:flex;gap:11px;align-items:flex-start;padding:13px;border:1px solid var(--line);border-radius:14px;margin-bottom:9px;background:var(--card)}
+.modelRow.sel{border-color:var(--acc);background:linear-gradient(135deg,rgba(166,255,63,.07),transparent)}
+.radio{width:19px;height:19px;border-radius:50%;border:2px solid var(--line2);flex:none;margin-top:2px;position:relative}
+.modelRow.sel .radio{border-color:var(--acc)}
+.modelRow.sel .radio::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--acc)}
+.mName{font-size:13.5px;font-weight:700}
+.mDesc{font-size:11.5px;color:var(--sub2);margin-top:3px;line-height:1.5}
+#modalMask{position:absolute;inset:0;background:rgba(4,6,10,.78);z-index:50;display:none;place-items:center;padding:26px}
+#modalMask.show{display:grid}
+#modal{background:var(--bg2);border:1px solid var(--line2);border-radius:22px;padding:22px;width:100%;animation:msgIn .25s ease}
+#modal h3{font-size:16px;font-weight:800;margin-bottom:6px}
+#modal .mSub{font-size:12px;color:var(--sub2);line-height:1.6;margin-bottom:14px}
+#modal textarea,#modal input[type=text]{width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:11px 13px;font-size:14px;color:var(--txt);resize:none;margin-bottom:11px}
+#modal select{width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14px;color:var(--txt);margin-bottom:11px}
+.mBtns{display:flex;gap:9px;margin-top:4px}
+.mBtns button{flex:1;padding:12px;border-radius:13px;font-size:14px;font-weight:700}
+.mBtns .primary{background:linear-gradient(135deg,#C6FF5E,#8FE01E);color:#0A0F05}
+.mBtns .ghost{background:var(--card2);color:var(--sub)}
+.goalGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.goalOpt{border:1px solid var(--line);border-radius:13px;padding:12px 10px;font-size:13px;font-weight:700;text-align:center;background:var(--card)}
+.goalOpt.sel{border-color:var(--acc);color:var(--acc);background:var(--acc-dim)}
+.dots{display:flex;gap:6px;justify-content:center;margin-bottom:16px}
+.dots i{width:7px;height:7px;border-radius:50%;background:#2A3A4E;transition:all .2s}
+.dots i.on{background:var(--acc);width:18px;border-radius:4px}
+
+/* ============ Toast ============ */
+#toast{position:absolute;top:54px;left:50%;transform:translateX(-50%) translateY(-16px);z-index:60;
+  background:#1B2735;border:1px solid var(--line2);color:var(--txt);font-size:12.5px;font-weight:600;
+  padding:9px 17px;border-radius:999px;opacity:0;pointer-events:none;transition:all .25s;white-space:nowrap;
+  box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:88%;overflow:hidden;text-overflow:ellipsis}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div id="phone">
+  <!-- 状态栏 -->
+  <div id="statusbar">
+    <span id="sbTime">9:41</span>
+    <span id="sbRight">
+      <svg width="16" height="11" viewBox="0 0 16 11" fill="#8CA0B5"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.3" y="5" width="3" height="6" rx="1"/><rect x="8.6" y="2.5" width="3" height="8.5" rx="1"/><rect x="12.9" y="0" width="3" height="11" rx="1"/></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="#8CA0B5" stroke-width="1.4" stroke-linecap="round"><path d="M1 3.6a9.5 9.5 0 0 1 13 0"/><path d="M3.6 6.4a6 6 0 0 1 7.8 0"/><path d="M6.2 9a2.6 2.6 0 0 1 2.6 0"/></svg>
+      <svg width="22" height="11" viewBox="0 0 22 11"><rect x="0.5" y="0.5" width="18" height="10" rx="3" fill="none" stroke="#8CA0B5"/><rect x="2" y="2" width="12" height="7" rx="1.5" fill="#A6FF3F"/><path d="M20 3.5v4a2.2 2.2 0 0 0 0-4z" fill="#8CA0B5"/></svg>
+    </span>
+  </div>
+
+  <!-- 顶栏 -->
+  <header id="appHeader">
+    <div class="botFace" id="hBot"></div>
+    <div id="hTitle">
+      <div id="hName"><span id="hBotName"></span> <span style="font-size:9.5px;font-weight:700;color:var(--acc);background:var(--acc-dim);padding:2px 7px;border-radius:999px">AI掌舵</span></div>
+      <div id="hStatus"><span class="dotOnline"></span><span id="hStatusTxt">在线 · 记忆库加载中</span></div>
+    </div>
+    <button id="modelChip" onclick="openModelSheet()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h6v6H9z"/></svg>
+      <span id="modelChipTxt">step-5-preview</span>
+    </button>
+  </header>
+
+  <main>
+    <!-- ================= 聊天 ================= -->
+    <section class="tab active" id="tabChat">
+      <div id="chatScroll"></div>
+      <div id="composer">
+        <div id="quickRow"></div>
+        <div id="inputRow">
+          <textarea id="msgInput" rows="1" placeholder="打卡 / 记住我 / 问它都行"></textarea>
+          <button id="sendBtn" onclick="onSendClick()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#0A0F05" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 掌舵面板 ================= -->
+    <section class="tab" id="tabDash">
+      <div id="dashDate"></div>
+            <div class="card">
+        <div class="cardTitle">📊 今日碳基服务器指标 <span class="more" onclick="switchTab('chat')">去对话汇报 →</span></div>
+        <div class="rings" id="ringsRow"></div>
+      </div>
+      <div class="card">
+        <div class="cardTitle">🗓️ 一周训练计划 <span class="more" id="planMore"></span></div>
+        <div id="planBody"></div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button class="miniBtn" id="planGenBtn" onclick="askEquipThenGenerate()">🤖 AI 生成</button>
+          <button class="miniBtn ghost" onclick="openEditPlan()">✏️ 编辑</button>
+          <button class="miniBtn ghost" onclick="openEquipModal()">🔧 器械</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="cardTitle">🧭 AI 掌舵日报</div>
+        <div id="adviceList"></div>
+      </div>
+      <div class="card">
+        <div class="cardTitle">🖥️ 碳基服务器状态</div>
+        <div id="serverBox">
+          <div id="serverBot"></div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:baseline;gap:8px"><div id="serverLoad">--%</div><span id="serverPill" class="pill ok">流畅</span></div>
+            <div id="serverTip"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="cardTitle">🌙 近 7 日睡眠</div>
+        <div id="weekChart"></div>
+      </div>
+      <div class="secTitle">⚡ 一键打卡（自动写入今日数据）</div>
+      <div id="quickLogs"></div>
+    </section>
+
+    <!-- ================= 记忆库 ================= -->
+    <section class="tab" id="tabMem">
+      <div id="memStats"></div>
+      <div class="card" id="memSummary">
+        <div class="cardTitle">🧠 <span id="memSumBotName"></span>对你的当前理解</div>
+        <div class="sumTxt" id="memSumTxt"></div>
+      </div>
+      <div class="card">
+        <div class="cardTitle">🍽️ 吃了什么 <span class="more" id="dietCount"></span></div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input id="dietInput" placeholder="刚吃了什么？如：牛肉面 + 鸡蛋" style="flex:1;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px 13px;font-size:13px;color:var(--txt)" onkeydown="if(event.key==='Enter')addDiet()">
+          <button class="miniBtn" onclick="addDiet()">记一笔</button>
+        </div>
+        <div id="dietList"></div>
+        <div id="dietEmpty" style="display:none;font-size:12px;color:var(--sub2);padding:6px 0 2px">还没有记录。吃了什么顺手记一笔，时间自动带上。</div>
+      </div>
+      <div class="card">
+        <div class="cardTitle">📝 备忘录 <span class="more" id="memoCount"></span></div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input id="memoInput" placeholder="记件待办，如：周三晚 8 点搏击" style="flex:1;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px 13px;font-size:13px;color:var(--txt)" onkeydown="if(event.key==='Enter')addMemo()">
+          <button class="miniBtn" onclick="addMemo()">添加</button>
+        </div>
+        <div id="memoList"></div>
+        <div id="memoEmpty" style="display:none;font-size:12px;color:var(--sub2);padding:6px 0 2px">还没有备忘。把待办、约定、灵感丢进来。</div>
+      </div>
+      <div id="memSearchRow">
+        <input id="memSearch" placeholder="搜索记忆，如：搏击 / 买房 / 乳糖…" oninput="renderMem()">
+      </div>
+      <div id="memFilters"></div>
+      <div id="memList"></div>
+      <div id="memEmpty" style="display:none">没有相关记忆。点右下角 + 手动添加一条。</div>
+    </section>
+    <section class="tab" id="tabAsset">
+    <div class="card">
+      <div class="cardTitle">📸 净资产快照 <span class="more" onclick="openAddAsset()">+ 记快照</span></div>
+      <div id="assetSummary"></div>
+    </div>
+    <div class="card">
+      <div class="cardTitle">📈 资产变化曲线（按快照时间）<span class="more">点曲线上的点可修改</span></div>
+      <div id="assetChart"></div>
+      <div id="snapChips"></div>
+    </div>
+  </section>
+  <section class="tab" id="tabHealth">
+    <div class="card">
+      <div class="cardTitle">🩺 健康档案 <span class="more" id="healthSrcTxt"></span></div>
+      <div id="healthBody"></div>
+      <div id="healthGenMeta" style="display:none;font-size:11px;color:var(--cyan);margin-top:10px"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="miniBtn" onclick="document.getElementById('reportFile').click()">📤 上传体检报告</button>
+        <button class="miniBtn ghost" onclick="openEditHealth()">✍️ 手动录入</button>
+      </div>
+      <input type="file" id="reportFile" accept="image/*" style="display:none" onchange="onReportFile(this)">
+    </div>
+    <div class="card">
+      <div class="cardTitle">📏 身体数据 <span class="more" onclick="openAddBody()">+ 记快照</span></div>
+      <div id="bodySummary"></div>
+    </div>
+    <div class="card">
+      <div class="cardTitle">📈 体重 / 体脂曲线（按快照时间）<span class="more">点曲线上的点可修改</span></div>
+      <div id="bodyChart"></div>
+      <div id="bodyChips"></div>
+    </div>
+  </section>
+  <button id="fabHealth" onclick="openAddBody()">+</button>
+  <button id="fabAsset" onclick="openAddAsset()">+</button>
+  <button id="fabMem" onclick="openAddMem()">+</button>
+
+    <!-- ================= 我的 ================= -->
+    <section class="tab" id="tabMe">
+      <div class="card">
+        <div class="cardTitle">⏳ 生命倒计时 <span class="more" onclick="openEditProfile()">设置</span></div>
+        <div id="lifeCountdown"></div>
+      </div>
+
+      <div class="card" id="meProfile">
+        <div id="meBot"></div>
+        <div style="flex:1">
+          <div id="meName"></div>
+          <div id="meSub"></div>
+        </div>
+        <button class="miniBtn ghost" onclick="openEditProfile()">编辑</button>
+      </div>
+
+      <div class="secTitle">🤖 机器人 / 模型</div>
+      <div class="card">
+        <div class="rowItem" onclick="openModelSheet()">
+          <div class="rIcon">⚙️</div>
+          <div class="rMain">当前模型<div class="rSub">机器人背后的大脑，可随时切换</div></div>
+          <div class="rVal" id="meModelVal"></div>
+        </div>
+        <div class="rowItem" onclick="openRenameBot()">
+          <div class="rIcon">🦾</div>
+          <div class="rMain">机器人名字<div class="rSub">它怎么称呼自己</div></div>
+          <div class="rVal" id="meBotNameVal"></div>
+        </div>
+        <div class="rowItem">
+          <div class="rIcon">📝</div>
+          <div class="rMain">自动记忆提取<div class="rSub">每轮回答时提炼值得记住的信息（职业/目标/习惯/偏好），自动入库</div></div>
+          <div class="toggle" id="tgAutoMem" onclick="toggleSet('autoMem')"></div>
+        </div>
+        <div class="rowItem">
+          <div class="rIcon">🔍</div>
+          <div class="rMain">联网搜索<div class="rSub">问到时效性问题时，自动调用 StepSearch 全网搜索后再回答</div></div>
+          <div class="toggle" id="tgWebSearch" onclick="toggleSet('webSearch')"></div>
+        </div>
+                      </div>
+
+      <div class="secTitle">📚 理论库（访谈同款）</div>
+      <div id="theoryList"></div>
+
+      <div class="secTitle">🔌 API 接入</div>
+      <div class="card">
+        <div style="font-size:12px;color:var(--sub);line-height:1.7;margin-bottom:10px">
+          所有问题由真实模型回答（OpenAI 兼容接口直连）。接入两步：<br>
+          ① 登录 <b style="color:var(--cyan)">StepFun 开放平台</b> platform.stepfun.com（需注册登录）<br>
+          ② 控制台 → API Keys 创建 Key，粘贴到下方<br>
+          <span style="color:var(--sub2)">Key 只存在你自己设备的 localStorage，不经过任何服务器。已实测 api.stepfun.com 允许浏览器跨域直连。</span>
+        </div>
+        <div class="apiRow"><input id="apiBase" placeholder="https://api.stepfun.com/v1"></div>
+        <div class="apiRow"><input id="apiKey" type="text" placeholder="sk-...（API Key）"><button class="miniBtn" onclick="saveApi()">保存</button></div>
+        <div class="apiRow"><button class="miniBtn ghost" onclick="testConnection()">测试连接</button><span id="apiStatus" style="font-size:11.5px;color:var(--sub2);align-self:center"></span></div>
+      </div>
+
+      <div class="secTitle">🗂️ 数据</div>
+      <div class="card">
+        <div class="rowItem" onclick="exportData()">
+          <div class="rIcon">📤</div>
+          <div class="rMain">导出记忆与数据<div class="rSub">下载 JSON 备份</div></div>
+          <div class="rVal">导出</div>
+        </div>
+        <div class="rowItem" onclick="confirmReset()">
+          <div class="rIcon">🗑️</div>
+          <div class="rMain">重置所有数据<div class="rSub">清空记忆、打卡与聊天记录</div></div>
+          <div class="rVal" style="color:var(--bad)">重置</div>
+        </div>
+        <div class="rowItem" onclick="startOnboarding()">
+          <div class="rIcon">✨</div>
+          <div class="rMain">重新运行新手引导<div class="rSub">让它重新认识你</div></div>
+          <div class="rVal">开始</div>
+        </div>
+      </div>
+
+      <div id="aboutVer">
+        薄肌计划 BojiPlan · v0.1.0 Preview<br>
+        Android 应用的网页预览版 · 机器人「<span id="aboutBotName"></span>」<br>
+        模型服务：直连 StepFun 开放平台 API（默认 step-5-preview）<br>
+        理论出处：孙宇晨 × 邵艾伦 5 小时访谈<br>
+        ⚠️ 理论均为个人观点合集，非投资 / 医学建议
+      </div>
+    </section>
+  </main>
+
+  <!-- 底部导航 -->
+  <nav id="bottomNav">
+    <button class="navBtn on" data-tab="chat" onclick="switchTab('chat')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H5l-2 2V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z"/><path d="M8.5 11.5h7M8.5 14.5h4"/></svg>
+      对话
+    </button>
+    <button class="navBtn" data-tab="dash" onclick="switchTab('dash')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 12l4.2-3.4"/><path d="M12 3v2M21 12h-2M12 21v-2M3 12h2"/></svg>
+      掌舵
+    </button>
+    <button class="navBtn" data-tab="mem" onclick="switchTab('mem')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6"/><path d="M4.5 11.5v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6"/></svg>
+      记忆
+    </button>
+    <button class="navBtn" data-tab="asset" onclick="switchTab('asset')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M9.2 10h5.6M9.2 14h5.6"/></svg>
+      资产
+    </button>
+    <button class="navBtn" data-tab="health" onclick="switchTab('health')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S3.5 15.5 2.3 10.4C1.4 6.9 3.8 4 7 4c2 0 3.6 1 5 2.8C13.4 5 15 4 17 4c3.2 0 5.6 2.9 4.7 6.4-.9 3.9-8.4 10.1-9.7 10.1z"/><path d="M7 12h2.5l1.2-2.2 1.3 4 1.2-1.8H17"/></svg>
+      健康
+    </button>
+    <button class="navBtn" data-tab="me" onclick="switchTab('me')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4.5 20c1.4-3.5 4.2-5 7.5-5s6.1 1.5 7.5 5"/></svg>
+      我的
+    </button>
+  </nav>
+  <div id="gestureBar"></div>
+
+  <!-- 弹层 -->
+  <div id="sheetMask" onclick="closeSheet()"></div>
+  <div id="sheet">
+    <div id="sheetHead"><span id="sheetTitle"></span><button class="x" onclick="closeSheet()">✕</button></div>
+    <div id="sheetBody"></div>
+  </div>
+  <div id="modalMask"><div id="modal"></div></div>
+  <div id="toast"></div>
+</div>
+
+<div id="deskNote">
+  <b style="color:var(--acc)">薄肌计划 · Android 预览版</b><br>
+  此为网页 Preview：数据保存在本机；机器人直连 StepFun 开放平台 API（需在「我的」填入 Key）。<br>
+  理论出处：孙宇晨 × 邵艾伦访谈，仅为观点合集，非投资/医学建议。
+</div>
+
+<script>
+/* =====================================================
+   薄肌计划 BojiPlan —— AI 掌舵 Agent（网页预览版）
+   ===================================================== */
+var LS_KEY = 'boji_plan_v1';
+function botName(){ return (S && S.settings && S.settings.botName) || '小薄'; }
+var TARGETS = { water: 3000, sleep: 8, train: 60, create: 1 };
+
+var MODELS_FALLBACK = [
+  { id:'step-5-preview', n:'step-5-preview', d:'默认 · 阶跃旗舰基模，1M 上下文，日常掌舵主力' }
+];
+/* 非对话类模型过滤掉 */
+var MODEL_SKIP = /embed|tts|asr|rerank|ocr|moderat|image|video|audio|vision-?understand/i;
+function modelList(){ return (S && S.models && S.models.length) ? S.models : MODELS_FALLBACK; }
+function fetchModels(quiet){
+  if(!S.settings.apiKey){
+    if(!quiet) toast('拉取模型列表需要先填入 API Key');
+    return Promise.resolve(false);
+  }
+  var url = (S.settings.apiBase || 'https://api.stepfun.com/v1').replace(/\/+$/,'') + '/models';
+  return fetch(url, { headers:{ 'Authorization':'Bearer ' + S.settings.apiKey } })
+    .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(j){
+      var list = (j.data || j.models || []).map(function(m){
+        return { id:m.id, n:m.id, d:(m.owned_by ? '提供方 ' + m.owned_by : '') };
+      }).filter(function(m){ return m.id && !MODEL_SKIP.test(m.id); });
+      if(!list.length) throw new Error('接口未返回可用模型');
+      S.models = list; S.modelsAt = Date.now(); save();
+      return true;
+    })
+    .catch(function(e){
+      if(!quiet) toast('模型列表拉取失败：' + e.message + '（用内置列表）');
+      return false;
+    });
+}
+
+var PERSONAS = {
+  sun:   { n:'孙学导师', icon:'💰',
+    fallback:[
+      '从「先开图，再出兵」的角度：你现在的样本量还不够，先把调研做厚再下注。',
+      '自由是心态和选择权，不是存款数字。先进入自由的状态，财富是副产品。',
+      '少消费，多创造。这件事能沉淀成你的长期资产吗？',
+      '把自己当成一家公司来运营：我掌舵，你做最终判断。'] },
+  coach: { n:'毒舌教练', icon:'🥊',
+    fallback:[
+      '别问了，先做。薄肌不会自己长出来，搏击反应更不会。',
+      '又熬夜了吧？今晚 23 点前上床，否则今天的训练全部作废。',
+      '借口比肌肉多。先完成打卡，再回来跟我谈决策。',
+      '大佬们缺的就是对抗训练这块神经资产——你去练，就赢了。'] },
+  soft:  { n:'温柔伙伴', icon:'🌱',
+    fallback:[
+      '慢慢来，我陪着你。先从今天最小的一步开始，好吗？',
+      '今天也辛苦了。先喝口水，我们一件一件来。',
+      '不管你做什么决定，我帮你列个调研清单兜底。',
+      '进步是算总账的，一天掉链子不影响整个赛季。'] }
+};
+
+var THEORIES = [
+  { t:'搏击理论', tag:'邵艾伦', d:'薄肌管体态、代谢、抗衰（静态资产）；搏击管神经、反应、抗压、冲突心态（动态神经资产）。大佬们缺的正是这一块——不是要去打比赛，而是对抗训练带来的心理韧性。' },
+  { t:'大水理论', tag:'邵艾伦', d:'大量白开水，少糖饮料。水是代谢和激素的地基，也是维持薄肌的基础设施。' },
+  { t:'大睡理论', tag:'邵艾伦', d:'睡眠是激素与肌肉修复的核心。熬夜会直接废掉薄肌训练成果——训练只是下单，睡觉才是收货。' },
+  { t:'先开图，再出兵', tag:'孙宇晨', d:'重大决策前先广泛调研足够多样本：买房先看 100 套，前 3 套只用来建立认知基准、绝不能买；4~6 套遇到显著更好的，立刻下手。信息足够之后再行动，不要在认知没建立时仓促下注。' },
+  { t:'先自由，后财富', tag:'孙宇晨', d:'大众误区是「赚到钱才能自由」。真相是：自由是一种心态与选择权，先拥有自由的状态，财富才会作为副产品到来。逐水草而居，保持灵活，不要被资产和固定岗位锁死。' },
+  { t:'AI 个人掌舵', tag:'孙宇晨', d:'把自己当成一家公司：AI 做日常掌舵，人负责最终判断微调。持续记录睡眠、饮食、训练、收支、日程喂给 AI；遇到大事同时问多个大模型，取方案交集，再自己决策。年轻人预算很少时，优先买 AI 工具而不是消费品。' },
+  { t:'少消费，多创造', tag:'孙宇晨', d:'消费只能带来短暂快感；创造（写作、产品、项目、内容）带来长期价值与身份跃迁。财富自由之后依然要持续创造，不能停留在纯消费享乐。' },
+  { t:'人生体验互补', tag:'孙宇晨', d:'一直做创业者会缺少打工人视角，人生要补齐不同身份体验——他甚至提出愿意倒贴钱去 OpenAI / Anthropic 上班。模拟器游戏同理：通过游戏体验不同人生，打开认知边界。' },
+  { t:'三位一体：孙学 × 薄肌 × 黄毛', tag:'网络总结', d:'孙学：财富、机会、决策方法论；薄肌：身体底层资产，碳基服务器；黄毛：独立判断，敢于顶住质疑执行。' }
+];
+
+var MEM_CATS = {
+  '身体': { c:'#A6FF3F' }, '决策': { c:'#22D3EE' }, '财富': { c:'#FB923C' },
+  '偏好': { c:'#A78BFA' }, '目标': { c:'#FF5C5C' }, '关系': { c:'#F472B6' }
+};
+
+
+var QUICKS = ['💧 喝水打卡','😴 睡眠打卡','🥊 搏击训练','🏋️ 薄肌训练','✍️ 创造记录','📚 讲讲理论'];
+
+/* ---------------- 工具 ---------------- */
+function $(s){ return document.querySelector(s); }
+function $$(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); }
+function dstr(d){ d = d || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+/* ---------------- 状态 ---------------- */
+var S = null;
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
+function load(){ try{ var r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : null; }catch(e){ return null; } }
+
+function getDay(k){
+  k = k || dstr();
+  if(!S.data[k]) S.data[k] = { water:0, sleep:0, fight:0, gym:0, create:0 };
+  return S.data[k];
+}
+
+function seedDiet(){
+  function at(h, m){ var d = new Date(); d.setHours(h, m, 0, 0); return d.getTime(); }
+  return [
+    { id:uid(), text:'早餐：燕麦 60g + 鸡蛋 2 个 + 黑咖啡', ts:at(8, 5) },
+    { id:uid(), text:'午餐：鸡胸肉沙拉 + 米饭 200g', ts:at(12, 20) },
+    { id:uid(), text:'加餐：香蕉 1 根 + 分离乳清 30g', ts:at(15, 40) }
+  ];
+}
+function seedMemo(){
+  var now = Date.now();
+  return [
+    { id:uid(), text:'周三晚 8 点和 Allen 练搏击', done:false, ts:now - 5*3600*1000 },
+    { id:uid(), text:'三个月后复查肝功能和尿酸', done:false, ts:now - 86400000 },
+    { id:uid(), text:'买分离乳清蛋白粉', done:true, ts:now - 2*86400000 }
+  ];
+}
+function seedHealth(){
+  return {
+    summary: '整体底子不错，两个要盯的点：轻度脂肪肝（肝）、尿酸偏高（代谢）。控糖控酒，每周保持 3 次搏击，睡够 8 小时，三个月后复查。',
+    items: [
+      { name:'轻度脂肪肝', system:'肝',   level:'关注', note:'B 超提示' },
+      { name:'尿酸偏高',   system:'代谢', level:'关注', note:'480 μmol/L' }
+    ],
+    updatedAt: Date.now() - 5*86400000,
+    source: 'ai'
+  };
+}
+function seedBody(){
+  var out = [];
+  var defs = [
+    [58, 175, 78.0, 22.0],
+    [45, 175, 76.5, 21.0],
+    [31, 175, 75.0, 20.0],
+    [16, 175, 74.2, 19.4],
+    [4,  175, 73.5, 18.8]
+  ];
+  defs.forEach(function(d){
+    var dt = new Date(); dt.setDate(dt.getDate() - d[0]);
+    out.push({ id:uid(), date:dstr(dt), height:d[1], weight:d[2], fat:d[3], ts:dt.getTime(), src:'user' });
+  });
+  return out;
+}
+function seedSnapshots(){
+  /* 演示数据：近 60 天的 5 次快照，让曲线一打开就有形状 */
+  var out = [];
+  var defs = [
+    [58, 120000, 0,      '起点：工资结余'],
+    [45, 180000, 0,      '定投一年后'],
+    [31, 190000, 20000,  '年初借出 2 万计入债权'],
+    [16, 220000, 20000,  '项目分成到账'],
+    [4,  270000, 20000,  '近期一笔投资浮盈']
+  ];
+  defs.forEach(function(d){
+    var dt = new Date(); dt.setDate(dt.getDate() - d[0]);
+    out.push({ id:uid(), date:dstr(dt), assets:d[1], debts:d[2], note:d[3], ts:dt.getTime(), src:'user' });
+  });
+  return out;
+}
+
+function seed(){
+  var t = dstr(), d = {};
+  var sleepHist = [7.2, 6.4, 7.8, 8.2, 6.9, 7.5, 7.6];
+  var waterHist = [2100, 1750, 2600, 3000, 2400, 2850, 1650];
+  for(var i=6;i>=0;i--){
+    var dt = new Date(); dt.setDate(dt.getDate()-i);
+    d[dstr(dt)] = {
+      water: waterHist[6-i], sleep: sleepHist[6-i],
+      fight: i%2 ? 25 : 0, gym: [40,0,45,35,0,50,30][6-i],
+      create: i<3 ? 1 : 0
+    };
+  }
+  var y = new Date(); y.setDate(y.getDate()-1);
+  return {
+    onboarded: true,
+    user: { name:'阿晨', goal:'全套掌舵', since: dstr(y), lifespan:80, birthday:'1995-06-15', gender:'男', equipment:'哑铃一对（5-20kg）、可调节卧推凳、瑜伽垫、小区单杠；无搏击条件' },
+    settings: { model:'step-5-preview', botName:'小薄', autoMem:true, apiBase:'https://api.stepfun.com/v1', apiKey:'' },
+    data: d,
+    diet: seedDiet(),
+    memo: seedMemo(),
+    memories: [
+      { id:uid(), cat:'目标', text:'2025 Q3 目标：体脂降到 12%，能打完 3 局自由搏击不喘', src:'ai', imp:3, date:dstr(y) },
+      { id:uid(), cat:'身体', text:'乳糖不耐，蛋白粉选分离乳清，训练后 30 分钟内补', src:'user', imp:2, date:dstr(y) },
+      { id:uid(), cat:'决策', text:'看房剧本：先看 100 套，前 3 套只建认知基准不买，遇到显著更优立刻下手', src:'ai', imp:3, date:dstr(y) },
+      { id:uid(), cat:'偏好', text:'认同「先自由后财富」：不被固定岗位锁死，逐水草而居', src:'user', imp:2, date:dstr(y) },
+      { id:uid(), cat:'关系', text:'每周三晚 8 点和 Allen 练搏击，雷打不动', src:'user', imp:3, date:dstr(y) },
+      { id:uid(), cat:'财富', text:'现金流结构：内容 + 产品。消费只保留体验型，其余一律转入创造账户', src:'ai', imp:2, date:dstr(y) },
+      { id:uid(), cat:'身体', text:'喝水目标 3000ml/天，含糖饮料每周不超过 1 次', src:'ai', imp:1, date:dstr(y) }
+    ],
+    snapshots: seedSnapshots(),
+    health: seedHealth(),
+    body: seedBody(),
+    plan: seedPlan(),
+    chat: [
+      { who:'bot', html:'早上好，阿晨 👋 我是<b>' + botName() + '</b>，你的 AI 掌舵 Agent。模型 <b>step-5-preview</b> 已挂载，长期记忆 7 条。<br><br>昨天的数据我看完了：睡眠 7.5h 及格，饮水 2850ml 差一点，搏击 25 分钟 ✔。<br><br>今天想从哪件事开始？', t:Date.now() - 12*3600*1000 }
+    ]
+  };
+}
+
+/* ---------------- 机器人头像 ---------------- */
+function robotSVG(){
+  var gid = 'rg' + uid();
+  return '<svg viewBox="0 0 64 64">' +
+    '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="#22303F"/><stop offset="1" stop-color="#0D131B"/></linearGradient></defs>' +
+    '<line x1="32" y1="3" x2="32" y2="11" stroke="#A6FF3F" stroke-width="2"/>' +
+    '<circle cx="32" cy="4.5" r="3" fill="#A6FF3F"><animate attributeName="opacity" values="1;.3;1" dur="2s" repeatCount="indefinite"/></circle>' +
+    '<rect x="4" y="25" width="6" height="15" rx="3" fill="#2A3A4E"/>' +
+    '<rect x="54" y="25" width="6" height="15" rx="3" fill="#2A3A4E"/>' +
+    '<rect x="10" y="11" width="44" height="39" rx="14" fill="url(#' + gid + ')" stroke="#A6FF3F" stroke-width="1.4"/>' +
+    '<g class="eyes"><rect x="20" y="25" width="7.5" height="10" rx="3.7" fill="#A6FF3F"/>' +
+    '<rect x="36.5" y="25" width="7.5" height="10" rx="3.7" fill="#A6FF3F"/></g>' +
+    '<path d="M25.5 42 q6.5 6 13 0" stroke="#A6FF3F" fill="none" stroke-width="2.2" stroke-linecap="round"/>' +
+    '</svg>';
+}
+
+/* ---------------- Toast ---------------- */
+var toastTimer = null;
+function toast(msg){
+  var el = $('#toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2200);
+}
+
+/* ---------------- Tab ---------------- */
+function switchTab(t){
+  $$('.tab').forEach(function(el){ el.classList.remove('active'); });
+  $('#tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('active');
+  $$('.navBtn').forEach(function(b){ b.classList.toggle('on', b.dataset.tab === t); });
+  $('#fabMem').style.display = (t === 'mem') ? 'grid' : 'none';
+  $('#fabAsset').style.display = (t === 'asset') ? 'grid' : 'none';
+  $('#fabHealth').style.display = (t === 'health') ? 'grid' : 'none';
+  if(t === 'dash') renderDash();
+  if(t === 'mem') renderMem();
+  if(t === 'asset') renderAsset();
+  if(t === 'health'){ renderHealth(); renderBody(); }
+  if(t === 'me') renderMe();
+}
+
+/* ---------------- 聊天 ---------------- */
+function addMsg(who, html){
+  var box = document.createElement('div');
+  box.className = 'msg ' + who;
+  var now = new Date();
+  var time = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  box.innerHTML = (who === 'bot' ? '<div class="mAvatar">' + robotSVG() + '</div>' : '') +
+    '<div><div class="bubble">' + html + '</div><div class="mTime">' + time + '</div></div>';
+  $('#chatScroll').appendChild(box);
+  $('#chatScroll').scrollTop = $('#chatScroll').scrollHeight;
+}
+function addTyping(){
+  var box = document.createElement('div');
+  box.className = 'msg bot'; box.id = 'typingMsg';
+  box.innerHTML = '<div class="mAvatar">' + robotSVG() + '</div><div class="bubble typing"><i></i><i></i><i></i></div>';
+  $('#chatScroll').appendChild(box);
+  $('#chatScroll').scrollTop = $('#chatScroll').scrollHeight;
+  $('#hBot').classList.add('thinking');
+  return box;
+}
+function sendText(t){ $('#msgInput').value = t; onSendClick(); }
+
+function onSendClick(){
+  var inp = $('#msgInput');
+  var t = inp.value.trim();
+  if(!t) return;
+  inp.value = ''; inp.style.height = 'auto';
+  addMsg('user', esc(t));
+  S.chat.push({ who:'user', text:t, t:Date.now() });
+  var it = detect(t);
+  applyLog(it);                       /* 打卡/记忆类：本地先落数据 */
+  var typing = addTyping();
+  if(S.settings.apiKey){
+    askStepfun(t, it, typing);        /* 已配置 Key：所有问题走真实 API */
+  } else {
+    mockReply(t, it).then(function(r){
+      typing.remove(); $('#hBot').classList.remove('thinking');
+      addMsg('bot', r.html);
+      S.chat.push({ who:'bot', html:r.html, t:Date.now() });
+      save(); renderHeader();
+    });
+  }
+}
+
+/* 关键词意图识别 */
+function detect(t){
+  var s = t.toLowerCase();
+  if(/(你好|hi|hello|在吗|你是谁|能做什么|帮助|介绍)/.test(s)) return { type:'greet' };
+  var mm = t.match(/(-?\d+(?:\.\d+)?)\s*([+＋\-−*×xX/／])\s*(-?\d+(?:\.\d+)?)/);
+  if(mm) return { type:'math', a:parseFloat(mm[1]), b:parseFloat(mm[3]), op:mm[2] };
+  if(/(记住|记得|记下|别忘了|提醒我)/.test(s)) return { type:'memory', text: cleanMemText(t) };
+  if(/(理论|薄肌是什么|孙学|黄毛|先开图|搏击理论|大水|大睡|三位一体)/.test(s)) return { type:'theory' };
+  if(/(水|喝|饮料|ml|毫升|杯)/.test(s)) return { type:'water', ml: parseMl(t) };
+  if(/(睡|熬夜|起床|困)/.test(s)) return { type:'sleep', h: parseH(t) };
+  if(/(搏击|对抗|打拳|格斗|实战|反应|抗压)/.test(s)) return { type:'fight', m: parseMin(t, 30) };
+  if(/(薄肌|力量|健身|撸铁|训练|练了|打卡)/.test(s)) return { type:'gym', m: parseMin(t, 45) };
+  if(/(写|创造|发布|内容|产品|代码|视频|文章|输出)/.test(s)) return { type:'create' };
+  if(/(买房|看房|房子|房源|房贷)/.test(s)) return { type:'decision', variant:'house' };
+  if(/(择业|跳槽|找工作|转行|行业|专业|创业|项目|投资|理财|梭哈|all ?in|副业)/.test(s)) return { type:'decision', variant:'career' };
+  if(/(决策|选择|纠结|要不要|该不该|怎么选|拿不准|调研|开图|清单)/.test(s)) return { type:'decision', variant:'generic' };
+  return { type:'fallback' };
+}
+function cleanMemText(t){
+  return t.replace(/(记住|记得|记下|别忘了|提醒我|一下|：|:)/g,'').trim();
+}
+function parseMl(t){
+  var m = t.match(/(\d+(?:\.\d+)?)\s*(ml|毫升|升|l)(?!\w)/i);
+  if(m){ var v = parseFloat(m[1]); return (m[2] === '升' || m[2] === 'l') ? Math.round(v*1000) : Math.round(v); }
+  if(/一杯|一瓶/.test(t)) return 250;
+  return 250;
+}
+function parseH(t){
+  var m = t.match(/(\d+(?:\.\d+)?)\s*(个)?\s*(小时|h)/i);
+  return m ? parseFloat(m[1]) : 8;
+}
+function parseMin(t, def){
+  var m = t.match(/(\d+)\s*(分钟|min|分)/);
+  return m ? parseInt(m[1]) : def;
+}
+
+/* ============ StepCode 真实调用（OpenAI 兼容） ============ */
+var memNote = null;
+var keyNoticeShown = false;
+
+function applyLog(it){
+  /* 打卡/记忆类意图：本地先落数据，回复仍由模型生成 */
+  var d = getDay();
+  if(it.type === 'water') d.water += it.ml;
+  else if(it.type === 'sleep') d.sleep = it.h;
+  else if(it.type === 'fight') d.fight += it.m;
+  else if(it.type === 'gym') d.gym += it.m;
+  else if(it.type === 'create') d.create += 1;
+  else if(it.type === 'memory'){
+    var txt = it.text || '';
+    if(txt.length >= 2){
+      addMemory({ cat:guessCat(txt), text:txt, src:'user', imp:2 }, true);
+      memNote = txt;
+      toast('📚 已写入长期记忆');
+    }
+  }
+  save();
+}
+
+function mockReply(t, it){
+  /* 未配置 Key：明确告知 + 本地剧本兜底（提示只出现一次） */
+  var r = respond(t, it);
+  if(!S.settings.apiKey && !keyNoticeShown){
+    keyNoticeShown = true;
+    r.html = noKeyNotice() +
+      '<br><br><span style="color:var(--sub2);font-size:11px">▼ 以下为本地剧本引擎兜底回复（非真实模型，此提示只出现一次）</span><br><br>' + r.html;
+  }
+  return Promise.resolve(r);
+}
+
+function noKeyNotice(){
+  return '🔑 <b>尚未接入 API</b>——所有问题都应由真实模型（' + S.settings.model + '）回答。<br><br>' +
+    '接入两步：<br>① 登录 <b>StepFun 开放平台</b> platform.stepfun.com（需注册登录）<br>' +
+    '② 控制台 → API Keys 创建 Key，粘贴到「我的 → API 接入」<br><br>' +
+    '<span style="color:var(--sub2);font-size:12px">已实测 api.stepfun.com 允许浏览器跨域直连，Key 只存在你自己设备上。</span>';
+}
+
+function stripTags(s){ return String(s||'').replace(/<[^>]+>/g,''); }
+function stripMarkers(t){
+  return String(t || '').replace(/\[\[(MEMORY|ASSET|SNAPSHOT|BODY):[^\]]*\]\]/g, '').replace(/\n{3,}/g, '\n\n').trim();
+}
+/* 解析模型回答里的 [[MEMORY:分类|内容]] 标记 → 自动入库，并从展示文本中剥离 */
+function parseMemories(text){
+  var re = /\[\[MEMORY:\s*([^|\]\n]{1,6})\|([^\]\n]{2,60})\]\]/g;
+  var added = [], m, clean = String(text || '');
+  while ((m = re.exec(clean)) !== null){
+    var cat = MEM_CATS[m[1].trim()] ? m[1].trim() : '偏好';
+    var txt = m[2].trim();
+    var dup = S.memories.some(function(x){
+      return x.text === txt || (x.text.length > 3 && x.text.indexOf(txt) >= 0) || (txt.length > 3 && txt.indexOf(x.text) >= 0);
+    });
+    if(!dup && !added.some(function(x){ return x.text === txt; })) added.push({ cat:cat, text:txt });
+  }
+  clean = clean.replace(/\[\[(MEMORY|ASSET):[^\]]*\]\]/g, '').replace(/\n{3,}/g, '\n\n').trim();
+  return { clean:clean, added:added };
+}
+/* 记忆入库 + 提示（受「自动记忆提取」开关控制） */
+function absorbMemories(parsed){
+  if(!S.settings.autoMem || !parsed.added.length) return;
+  parsed.added.forEach(function(mm){ addMemory(mm, true); });
+  toast('🧠 ' + botName() + '记住了 ' + parsed.added.length + ' 条新信息');
+}
+function fmt(s){
+  return esc(s).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+}
+function srcTag(){
+  return '<div class="memTag" style="color:var(--cyan);background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.35)">⚡ ' + S.settings.model + ' · API 实时</div>';
+}
+
+function bodyCtx(){
+  var b = latestBody();
+  if(!b) return '暂无快照';
+  var s = '身高 ' + fmtNum(b.height, 0) + 'cm · 体重 ' + fmtNum(b.weight) + 'kg · 体脂 ' + fmtNum(b.fat) + '%';
+  var bmi = bmiOf(b.height, b.weight);
+  if(bmi > 0) s += ' · BMI ' + fmtNum(bmi) + '（' + bmiLabel(bmi) + '）';
+    return s + '（快照于 ' + b.date + '）';
+}
+function healthCtx(){
+  var h = S.health;
+  if(!h || (!h.summary && !(h.items && h.items.length))) return '暂无档案';
+  var s = h.summary || '';
+  if(h.items && h.items.length) s += '｜关注项：' + h.items.map(function(it){ return it.name + '(' + it.level + ')'; }).join('、');
+  return s;
+}
+function buildSystemPrompt(){
+  var p = PERSONAS[S.settings.persona];
+  var d = getDay();
+  var memTxt = S.memories.slice(0,25).map(function(m){ return '[' + m.cat + '] ' + m.text; }).join('\n');
+  return '你是「' + botName() + '」，薄肌计划 App 里的 AI 掌舵机器人，由阶跃星辰 StepCode（模型 ' + S.settings.model + '）驱动。\n' +
+    '用户：' + S.user.name + '（主战场：' + S.user.goal + '，' + (S.user.gender || '性别未填') + '，生日 ' + (S.user.birthday || '未填') + '，预期寿命 ' + (S.user.lifespan || 80) + ' 岁）。语气：朋友式、直接、不尬聊。\n\n' +
+    '【理论底座 · 来自孙宇晨×邵艾伦访谈】\n' +
+    '1. 搏击理论：薄肌是静态资产（体态/代谢/抗衰），搏击是动态神经资产（反应/抗压/冲突心态）\n' +
+    '2. 大水理论：大量白开水、少糖饮料；大睡理论：睡眠是激素与肌肉修复核心，熬夜直接废掉训练成果\n' +
+    '3. 先开图再出兵：重大决策前先调研足够多样本（买房看 100 套，前 3 套只建认知基准不下手，4~6 套遇显著更优立刻下手）\n' +
+    '4. 先自由后财富：自由是心态与选择权，财富是副产品；逐水草而居，不被岗位锁死\n' +
+    '5. AI 个人掌舵：AI 日常掌舵、人最终拍板；大事同时问多个大模型取交集\n' +
+    '6. 少消费多创造；人生体验互补\n\n' +
+    '【身体数据】' + bodyCtx() + '\n' +
+    '【健康档案】' + healthCtx() + '\n' +
+    '【今日数据】饮水 ' + d.water + '/3000ml · 睡眠 ' + d.sleep + '/8h · 搏击 ' + d.fight + 'min · 薄肌 ' + d.gym + 'min · 创造 ' + d.create + '次\n' +
+    '【长期记忆】\n' + (memTxt || '（暂无）') + '\n\n' +
+    '【行为准则】用中文，像朋友一样说话但别尬聊；可以自然引用上述理论但不要堆砌；用户发打卡类消息时本地已记录，你负责确认、鼓励、指出风险；重大决策主动引导「先开图，再出兵」；不确定就说不确定；回复控制在 200 字以内，可用 emoji 和短段落。\n\n' +
+    '【联网搜索】你可以调用 web_search 工具（StepSearch 全网搜索）。当用户问到时效性信息（新闻、天气、股价、赛事、最新发布）或你不确定的具体事实时，先搜索再基于结果回答，并自然提及来源；日常打卡、闲聊、理论问答不要调用。\n\n' +
+    '【长期记忆规则】如果用户在这轮对话里透露了值得长期记住的信息（职业、身份、目标、习惯、偏好、人际关系、重要决定、身体数据等），请在回答的最后单独输出一行：[[MEMORY:分类|内容]]，分类只能是：身体/决策/财富/偏好/目标/关系；内容写事实本身，25 字以内。没有值得记的信息就什么都不要加。这一行不会展示给用户。';
+}
+
+function buildMessages(t){
+  var msgs = [{ role:'system', content: buildSystemPrompt() }];
+  var hist = S.chat.slice(-16).map(function(m){
+    return { role: m.who === 'bot' ? 'assistant' : 'user', content: m.who === 'bot' ? stripTags(m.html) : (m.text || '') };
+  });
+  msgs = msgs.concat(hist);
+  if(memNote){
+    msgs.push({ role:'system', content:'（系统提示：用户刚说的「' + memNote + '」已被写入长期记忆库，请确认已记住）' });
+    memNote = null;
+  }
+  msgs.push({ role:'user', content:t });
+  return msgs;
+}
+
+/* ---- StepSearch 联网搜索（官方推荐：/v1/search 封装为 function 工具） ---- */
+var WEB_SEARCH_TOOL = {
+  type:'function',
+  function:{
+    name:'web_search',
+    description:'联网搜索（StepSearch 全网检索）。当用户问到时效性信息（新闻、天气、股价、赛事、最新发布）、或你不确定的具体事实时，先调用本工具获取最新资料，再基于结果回答。日常打卡、闲聊、理论问答不需要调用。',
+    parameters:{
+      type:'object',
+      properties:{
+        query:{ type:'string', description:'搜索关键词，简洁具体' },
+        n:{ type:'integer', description:'返回结果条数，默认 5，最多 10' }
+      },
+      required:['query']
+    }
+  }
+};
+function webSearch(q, n){
+  var url = (S.settings.apiBase || 'https://api.stepfun.com/v1').replace(/\/+$/,'') + '/search';
+  return fetch(url, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + S.settings.apiKey },
+    body: JSON.stringify({ query:q, n:n || 5 })
+  }).then(function(res){
+    if(!res.ok) return res.text().then(function(t){ var e = new Error('HTTP ' + res.status); e.status = res.status; e.body = t; throw e; });
+    return res.json();
+  }).then(function(j){
+    var arr = j.results || j.data || [];
+    return arr.slice(0, 8).map(function(x){
+      return { title:x.title || x.name || '', url:x.url || x.link || '', snippet:x.snippet || x.summary || x.content || '' };
+    }).filter(function(x){ return x.title || x.url; });
+  });
+}
+function sourcesCard(list){
+  if(!list || !list.length) return '';
+  var uniq = [], seen = {};
+  list.forEach(function(s){ if(s.url && !seen[s.url]){ seen[s.url] = 1; uniq.push(s); } });
+  if(!uniq.length) return '';
+  return '<div class="srcCard"><div class="srcTitle">🔎 联网搜索来源 · StepSearch</div>' +
+    uniq.slice(0,5).map(function(s, i){
+      return '<div class="srcItem">' + (i+1) + '. <a href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(s.title || s.url) + '</a>' +
+        (s.snippet ? '<div class="srcSnip">' + esc(s.snippet.slice(0, 120)) + '</div>' : '') + '</div>';
+    }).join('') + '</div>';
+}
+/* 流式解析：同时收集文本增量与 tool_calls */
+function streamChat(res, onText){
+  var content = '', tools = {};
+  return readEvents(res, function(j){
+    var c = j.choices && j.choices[0];
+    if(!c) return;
+    var d = c.delta || {};
+    if(d.content){ content += d.content; if(onText) onText(d.content); }
+    if(Array.isArray(d.tool_calls)){
+      d.tool_calls.forEach(function(tc){
+        var i = (tc.index === undefined ? 0 : tc.index);
+        if(!tools[i]) tools[i] = { id:tc.id || ('call_' + i), name:'', args:'' };
+        if(tc.id) tools[i].id = tc.id;
+        if(tc.function){
+          if(tc.function.name && !tools[i].name) tools[i].name = tc.function.name;
+          if(tc.function.arguments) tools[i].args += tc.function.arguments;
+        }
+      });
+    }
+  }).then(function(){
+    return { content:content, tools:Object.keys(tools).map(function(k){ return tools[k]; }) };
+  });
+}
+/* 流式读取生成类请求：思维链(reasoning_content)与正文(content)分开累计 */
+function streamGenerate(res, onAny){
+  var content = '', reasoning = '';
+  return readEvents(res, function(j){
+    var c = j.choices && j.choices[0]; if(!c) return;
+    var d = c.delta || {};
+    if(d.reasoning_content){ reasoning += d.reasoning_content; onAny && onAny(d.reasoning_content, 'reason'); }
+    if(d.content){ content += d.content; onAny && onAny(d.content, 'content'); }
+  }).then(function(){ return { content:content, reasoning:reasoning }; });
+}
+function stepfunFetch(model, msgs, stream, tools){
+  /* 不设 max_tokens：官方默认为 INF 不限制，推理模型的思维链会占用大量 token */
+  var body = { model: model, messages: msgs, stream: !!stream, temperature: 0.7 };
+  if(tools && tools.length) body.tools = tools;
+  return fetch(S.settings.apiBase.replace(/\/+$/,'') + '/chat/completions', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + S.settings.apiKey },
+    body: JSON.stringify(body)
+  }).then(function(res){
+    if(!res.ok) return res.text().then(function(txt){
+      var e = new Error('HTTP ' + res.status); e.status = res.status; e.body = txt; throw e;
+    });
+    return res;
+  });
+}
+
+function readEvents(res, onJson){
+  var reader = res.body.getReader(), dec = new TextDecoder(), buf = '';
+  return new Promise(function(resolve, reject){
+    function pump(){
+      reader.read().then(function(r){
+        if(r.done){ resolve(); return; }
+        buf += dec.decode(r.value, { stream:true });
+        var lines = buf.split('\n'); buf = lines.pop();
+        for(var i = 0; i < lines.length; i++){
+          var line = lines[i].trim();
+          if(line.indexOf('data:') !== 0) continue;
+          var data = line.slice(5).trim();
+          if(data === '[DONE]') continue;
+          try{ onJson(JSON.parse(data)); }
+          catch(e){ reject(e); return; }
+        }
+        pump();
+      }).catch(reject);
+    }
+    pump();
+  });
+}
+function readStream(res, onChunk){
+  return readEvents(res, function(j){
+    var c = j.choices && j.choices[0];
+    if(c && c.delta && c.delta.content) onChunk(c.delta.content);
+  });
+}
+
+function addMsgStream(){
+  var box = document.createElement('div');
+  box.className = 'msg bot';
+  var now = new Date();
+  var ts = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  box.innerHTML = '<div class="mAvatar">' + robotSVG() + '</div><div><div class="bubble"></div><div class="mTime">' + ts + '</div></div>';
+  $('#chatScroll').appendChild(box);
+  $('#chatScroll').scrollTop = $('#chatScroll').scrollHeight;
+  return box.querySelector('.bubble');
+}
+
+function askStepfun(t, it, typing){
+  $('#hBot').classList.add('thinking');
+  var msgs = buildMessages(t);
+  var bubble = null, sources = [];
+  function ensureBubble(){
+    if(!bubble){ typing.remove(); bubble = addMsgStream(); }
+    return bubble;
+  }
+  var full = '';
+  function round(m, depth){
+    full = '';
+    var useTools = (depth === 0 && S.settings.webSearch !== false) ? [WEB_SEARCH_TOOL] : null;
+    stepfunFetch(S.settings.model, m, true, useTools).then(function(res){
+      return streamChat(res, function(chunk){
+        full += chunk;
+        var b = ensureBubble();
+        b.innerHTML = fmt(full);
+        $('#chatScroll').scrollTop = $('#chatScroll').scrollHeight;
+      });
+    }).then(function(r){
+      var calls = r.tools.filter(function(x){ return x.name === 'web_search'; });
+      if(!calls.length || depth >= 2){ finish(r.content); return; }
+      var m2 = m.concat([{
+        role:'assistant', content:r.content || '',
+        tool_calls: calls.map(function(c){ return { id:c.id, type:'function', function:{ name:c.name, arguments:c.args } }; })
+      }]);
+      var done = 0;
+      function next(){ if(done === calls.length) round(m2, depth + 1); }
+      calls.forEach(function(c){
+        var q = '';
+        try{ q = (JSON.parse(c.args || '{}').query) || ''; }catch(e){}
+        if(!q){
+          m2.push({ role:'tool', tool_call_id:c.id, content:'缺少 query 参数' });
+          done++; next(); return;
+        }
+        var b = ensureBubble();
+        b.innerHTML = '<span style="color:var(--cyan)">🔍 正在联网搜索：' + esc(q) + ' …</span>';
+        webSearch(q).then(function(items){
+          sources = sources.concat(items);
+          m2.push({ role:'tool', tool_call_id:c.id,
+            content: JSON.stringify(items.slice(0,6).map(function(x){ return { title:x.title, url:x.url, snippet:x.snippet }; })) });
+          done++; next();
+        }).catch(function(e){
+          m2.push({ role:'tool', tool_call_id:c.id, content:'搜索失败：' + e.message });
+          done++; next();
+        });
+      });
+    }).catch(function(err){ failStream(err, typing); });
+  }
+  function finish(text){
+    $('#hBot').classList.remove('thinking');
+    var b = ensureBubble();
+    b.innerHTML = fmt(text) + srcTag() + sourcesCard(sources);
+    S.chat.push({ who:'bot', html:b.innerHTML, t:Date.now(), api:true });
+    absorbMemories(parseMemories(text));
+    save(); if(S.settings.autoMem) autoExtract(t); renderHeader();
+  }
+  round(msgs, 0);
+}
+
+function failStream(err, typing){
+  $('#hBot').classList.remove('thinking');
+  if(typing) typing.remove();
+  var msg;
+  if(err && err.status){
+    msg = '⚠️ StepCode 返回 <b>' + err.status + '</b>' +
+      (err.status === 401 ? '：API Key 无效，或尚未在 StepFun 开放平台（platform.stepfun.com）登录并创建 Key' : '') +
+      '。<br><span style="color:var(--sub2);font-size:12px">' + esc((err.body || '').slice(0, 150)) + '</span>';
+  } else {
+    msg = '⚠️ 请求失败：' + esc(err && err.message ? err.message : String(err)) + '。<br><span style="color:var(--sub2);font-size:12px">' +
+      'api.stepfun.com 已确认允许浏览器跨域；如仍失败请检查网络或 Key。' +
+      '</span>';
+  }
+  addMsg('bot', msg);
+  S.chat.push({ who:'bot', html:msg, t:Date.now() });
+  save();
+}
+
+function testConnection(){
+  var st = $('#apiStatus');
+  if(!st) return;
+  if(!S.settings.apiKey){ st.textContent = '请先保存 API Key'; st.style.color = 'var(--warn)'; return; }
+  st.textContent = '测试中…'; st.style.color = 'var(--sub2)';
+  /* 专用探针：max_tokens=1 只要 HTTP 200 就算通（推理模型下 content 为空属正常） */
+  fetch((S.settings.apiBase || 'https://api.stepfun.com/v1').replace(/\/+$/,'') + '/chat/completions', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + S.settings.apiKey },
+    body: JSON.stringify({ model: S.settings.model, messages:[{ role:'user', content:'ping' }], max_tokens: 1 })
+  }).then(function(res){
+    if(!res.ok) return res.text().then(function(t){ var e = new Error('HTTP ' + res.status); e.status = res.status; e.body = t; throw e; });
+    return res.json();
+  }).then(function(){
+    st.textContent = '✅ 连接成功 · ' + S.settings.model + '（HTTP 200）';
+    st.style.color = 'var(--acc)';
+  }).catch(function(e){
+    st.textContent = '❌ ' + (e.status
+      ? ('HTTP ' + e.status + (e.status === 401 ? ' · Key 无效，或未在开放平台登录创建' : e.status === 402 ? ' · 额度不足' : ''))
+      : e.message);
+    st.style.color = 'var(--bad)';
+  });
+}
+
+function respond(t, it){
+  var d = getDay();
+  var p = PERSONAS.sun;
+  var model = S.settings.model;
+
+  if(it.type === 'math'){
+    var a = it.a, b = it.b, op = it.op, r;
+    if(op === '+' || op === '＋') r = a + b;
+    else if(op === '-' || op === '−') r = a - b;
+    else if(op === '*' || op === '×' || op === 'x' || op === 'X') r = a * b;
+    else r = b !== 0 ? a / b : '∞（除数不能为 0）';
+    var show = (typeof r === 'number') ? String(Math.round(r * 10000) / 10000) : r;
+    return { html:
+      '🧮 <b>' + a + ' ' + op + ' ' + b + ' = ' + show + '</b><br><br>' +
+      '这种送分题对我背后的 ' + model + ' 毫无压力。<br>' +
+      '<span style="color:var(--sub2);font-size:12px">坦白局：预览版的' + botName() + '跑的是内置模拟引擎，只懂打卡、决策、理论这些剧本；在「我的 → API 配置」接上真实模型后我才全能。</span>'
+    };
+  }
+
+  if(it.type === 'greet'){
+    return { html:
+      '你好，' + S.user.name + '。我是<b>' + botName() + '</b>，你的 AI 掌舵 Agent 🦾<br><br>' +
+      '· 大脑：<b>' + model + '</b>（顶栏可切换）<br>' +
+      '· 长期记忆：<b>' + S.memories.length + ' 条</b>，关于你的事我会一直记着<br>' +
+      '· 理论底座：搏击 / 大水 / 大睡 / 先开图再出兵 / 先自由后财富<br><br>' +
+      '我能帮你：<br>💧 记录饮水、睡眠、搏击与薄肌训练<br>🧠 重大决策走「先开图，再出兵」流程<br>📚 记住你的目标、习惯和决定<br>🧭 每天给出掌舵建议<br><br>' +
+      '直接说，或点下面的快捷按钮开始。' +
+      '<div class="qchips">' + qchip('喝了500ml水') + qchip('睡了6.5小时') + qchip('练了30分钟搏击') + qchip('帮我做一个买房决策') + '</div>'
+    };
+  }
+
+  if(it.type === 'water'){
+    var left = Math.max(0, TARGETS.water - d.water);
+    var extra = left === 0
+      ? '今日饮水<b>达标</b>。代谢和激素进入稳定状态，薄肌的地基打牢了。'
+      : '还差 <b>' + left + 'ml</b>，下午接着补。大水理论：水是代谢和激素的地基，含糖饮料是薄肌的税。';
+    return { html:'💧 +' + it.ml + 'ml 已记录，今日累计 <b>' + d.water + 'ml</b>。' + extra, log:{} };
+  }
+
+  if(it.type === 'sleep'){
+    var msg;
+    if(it.h >= 8) msg = '大睡理论满分 ✔ 激素和肌肉修复的窗口全开，今天的训练算没白练。';
+    else if(it.h >= 7) msg = '及格，但离 8 小时还差一截。今晚提前 30 分钟上床，就是白捡的增肌。';
+    else msg = '<b>警告：熬夜会直接废掉薄肌训练成果。</b>睡眠赤字 ' + (TARGETS.sleep - it.h).toFixed(1) + 'h，今晚 23:00 前上床是最高优先级。';
+    return { html:'😴 睡眠 <b>' + it.h + 'h</b> 已记录（目标 8h）。' + msg };
+  }
+
+  if(it.type === 'fight'){
+    return { html:
+      '🥊 搏击 <b>+' + it.m + 'min</b>，今日训练合计 <b>' + (d.fight + d.gym) + 'min</b>。<br><br>' +
+      '搏击是<b>动态神经资产</b>：练反应、抗压、冲突心态。薄肌是静态资产，搏击补的是大佬们（巴菲特、马斯克）都缺的那块底层能力。<br><br>' +
+      '不是让你去打比赛——是对抗训练带来的心理韧性，会迁移到每一个谈判桌和压力场。'
+    };
+  }
+
+  if(it.type === 'gym'){
+    return { html:
+      '🏋️ 薄肌训练 <b>+' + it.m + 'min</b> 已记录。<br><br>' +
+      '记住公式：<b>训练只是下单，睡觉才是收货。</b>肌肉在睡眠里生长，今晚的 8 小时就是这批订单的物流。'
+    };
+  }
+
+  if(it.type === 'create'){
+    return { html:
+      '✍️ 创造 +1，本周累计 <b>' + weekCreate() + ' 次</b>。<br><br>' +
+      '少消费，多创造。消费的快感 24 小时消退，创造的作品会持续给你带身份和现金流。<b>财富自由之后也要继续创造。</b>'
+    };
+  }
+
+  if(it.type === 'memory'){
+    var txt = it.text || '';
+    if(txt.length < 2) return { html:'说清楚要记什么，比如：「记住我每周三晚和 Allen 练搏击」。' };
+    return { html:'📚 已写入长期记忆：<b>' + esc(txt) + '</b>。这类信息我会在后续决策里自动引用。' };
+  }
+
+  if(it.type === 'theory'){
+    return { html:
+      '📚 理论库共 <b>' + THEORIES.length + '</b> 套，完整版在「我的 → 理论库」。先给你三条最常用的：<br><br>' +
+      '1. <b>先开图，再出兵</b>——重大决策前先调研足够多样本，前几个样本只建基准不下手<br>' +
+      '2. <b>先自由，后财富</b>——自由是心态和选择权，财富是副产品<br>' +
+      '3. <b>搏击 + 薄肌</b>——静态资产 + 动态神经资产，两个都要<br><br>' +
+      '想深入哪一套？直接问我。' +
+      '<div class="qchips">' + qchip('详细讲讲先开图再出兵') + qchip('什么是搏击理论') + qchip('三位一体是什么') + '</div>'
+    };
+  }
+
+  if(it.type === 'decision'){
+    var head = '<b>先开图，再出兵。</b>这类决策别凭手感，按剧本走：<br><br>';
+    var steps, topic;
+    if(it.variant === 'house'){
+      topic = '先看满 100 套再出手，前 3 套只建基准';
+      steps =
+        '1️⃣ <b>广开图</b>：先看 <b>100 套</b>房，把价格 / 位置 / 户型 / 物业 / 退出难度全看一遍<br>' +
+        '2️⃣ <b>建基准</b>：<b>前 3 套只用来建立认知基准，绝不考虑买</b>——没有基准，你判断不了好坏<br>' +
+        '3️⃣ <b>设触发条件</b>：第 4~6 套开始，遇到<b>显著优于基准</b>的，立刻下手，不恋战<br>' +
+        '4️⃣ <b>AI 批量调研</b>：我可以并行拉取同小区成交记录、竞品房源、租售比数据，生成对比表';
+    } else if(it.variant === 'career'){
+      topic = '用 AI 批量调研 100 个选项，建坐标系再选赛道';
+      steps =
+        '1️⃣ <b>广开图</b>：用 AI 批量调研 <b>100 个行业 / 专业 / 项目</b>，每个只花 3 分钟<br>' +
+        '2️⃣ <b>建坐标系</b>：按「现金流 / 成长性 / 可迁移能力 / 退出难度」四列拉表<br>' +
+        '3️⃣ <b>收敛</b>：砍到 10 个候选，再逐个深挖——这时候才允许下注<br>' +
+        '4️⃣ <b>先自由后财富</b>：选那个不锁死你的选项，保持「逐水草而居」的灵活性';
+    } else {
+      topic = '样本量补足之前，不做重注';
+      steps =
+        '1️⃣ <b>广开图</b>：先列个调研清单，把这个决策的样本量补到 100 个量级<br>' +
+        '2️⃣ <b>建基准</b>：前几个样本只看不选，用来校准你的判断标准<br>' +
+        '3️⃣ <b>设触发条件</b>：写下「出现什么信号就出手」，避免临场情绪化<br>' +
+        '4️⃣ <b>取交集</b>：大事同时问多个大模型，只采纳方案交集部分，最终你自己拍板';
+    }
+    var html = head + steps + '<br>要不要我帮你把调研清单列出来？';
+    html += '<div class="qchips">' + qchip('帮我生成调研清单') + qchip('记下这个决策剧本') + qchip('换个思路') + '</div>';
+    return { html: html };
+  }
+
+  /* 兜底 */
+  var isQ = /[?？]|吗|什么|怎么|为什么|多少|几点|谁|哪|是不是|能不能/.test(t);
+  if(isQ){
+    return { html:
+      '这个问题触及了我<b>内置模拟引擎</b>的盲区 😅<br><br>' +
+      '坦白说：预览版的' + botName() + '只会台词——打卡、「先开图再出兵」、理论库这些是写好的剧本；开放问答需要真实大模型。<br><br>' +
+      '两个解法：<br>1. 去「我的 → API 配置」填入 OpenAI 兼容接口，我就能认真回答<br>2. 或者照孙哥的方法：同时问 3 个大模型，取方案交集，自己拍板' +
+      '<div class="qchips">' + qchip('帮我做一个买房决策') + qchip('讲讲搏击理论') + qchip('我要打卡喝水500ml') + '</div>'
+    };
+  }
+  var arr = p.fallback;
+  var txt = arr[Math.floor(Math.random()*arr.length)];
+  var extra = S.settings.autoMem && /(每周|每天|决定|我要|计划|目标|过敏|不喜欢)/.test(t)
+    ? '<div class="memTag">🧠 检测到长期信息，已自动提取</div>' : '';
+  return { html: txt + '<br><br><span style="color:var(--sub2);font-size:12px">—— ' + p.icon + ' ' + p.n + ' · ' + model + '</span>' + extra };
+}
+
+function qchip(t){ return '<button class="qchip" onclick="sendText(\'' + t.replace(/'/g,"\\'") + '\')">' + t + '</button>'; }
+function weekCreate(){
+  var n = 0;
+  for(var i=0;i<7;i++){ var dt = new Date(); dt.setDate(dt.getDate()-i); var e = S.data[dstr(dt)]; if(e) n += e.create||0; }
+  return n;
+}
+
+/* 自动记忆提取 */
+function autoExtract(t){
+  var m = t.match(/(?:记住|记得)?(.{4,60})/);
+  if(!m) return;
+  var txt = m[1].replace(/(记住|记得|一下|：|:)/g,'').trim();
+  if(txt.length < 4) return;
+  if(!/(每周|每天|决定|我要|计划|目标是|过敏|不喜欢|习惯)/.test(t)) return;
+  var dup = S.memories.some(function(x){ return x.text === txt; });
+  if(dup) return;
+  addMemory({ cat: guessCat(txt), text: txt, src:'ai', imp:1 }, false);
+  toast('🧠 已自动提取一条长期记忆');
+}
+
+/* ---------------- 记忆 ---------------- */
+var memFilter = '全部';
+function addMemory(m, silent){
+  S.memories.unshift({ id:uid(), cat:m.cat||'偏好', text:m.text, src:m.src||'user', imp:m.imp||2, date:dstr() });
+  save(); renderMem(); renderHeader();
+  if(!silent) toast('📚 已写入长期记忆');
+}
+function guessCat(t){
+  if(/(睡|水|训练|薄肌|搏击|蛋白|饮食|身体|奶)/.test(t)) return '身体';
+  if(/(买|房|投资|钱|现金流|工资|薪|财富|收入)/.test(t)) return '财富';
+  if(/(决定|选|决策|计划|目标|要|准备)/.test(t)) return '目标';
+  if(/(朋友|家人|对象|Allen|同事|每周.*(练|见|开会))/.test(t)) return '关系';
+  if(/(喜欢|不喜欢|偏好|习惯|偏好)/.test(t)) return '偏好';
+  return '偏好';
+}
+function delMem(id){
+  S.memories = S.memories.filter(function(m){ return m.id !== id; });
+  save(); renderMem(); renderHeader(); toast('已删除');
+}
+/* ============ 饮食记录 & 备忘录 ============ */
+function fmtTime(ts){ var t = new Date(ts); return String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0'); }
+function dayLabel(ts){ return dstr(new Date(ts)) === dstr() ? '今天' : dstr(new Date(ts)).slice(5); }
+function renderDiet(){
+  var list = S.diet.slice().sort(function(a,b){ return b.ts - a.ts; });
+  var today = list.filter(function(e){ return dstr(new Date(e.ts)) === dstr(); }).length;
+  var c = $('#dietCount'); if(c) c.textContent = '今天 ' + today + ' 笔';
+  var emp = $('#dietEmpty'); if(emp) emp.style.display = list.length ? 'none' : 'block';
+  var box = $('#dietList'); if(!box) return;
+  box.innerHTML = list.slice(0, 30).map(function(e){
+    return '<div class="healthItem">' +
+      '<span style="font-size:11px;font-weight:700;color:var(--cyan);flex:none;font-variant-numeric:tabular-nums">' + fmtTime(e.ts) + '</span>' +
+      '<span style="font-size:10px;color:var(--sub2);flex:none">' + dayLabel(e.ts) + '</span>' +
+      '<span class="hiName" style="flex:1;font-weight:500">' + esc(e.text) + '</span>' +
+      '<button class="memDel" style="position:static" onclick="delDiet(\'' + e.id + '\')">✕</button></div>';
+  }).join('');
+}
+function addDiet(){
+  var v = ($('#dietInput').value || '').trim();
+  if(!v){ toast('写一下吃了什么'); return; }
+  S.diet.push({ id:uid(), text:v.slice(0, 80), ts:Date.now() });
+  $('#dietInput').value = '';
+  save(); renderDiet();
+  toast('🍽️ 已记录 · ' + fmtTime(Date.now()));
+}
+function delDiet(id){
+  S.diet = S.diet.filter(function(e){ return e.id !== id; });
+  save(); renderDiet();
+}
+function renderMemo(){
+  var list = S.memo.slice().sort(function(a,b){
+    return (a.done ? 1 : 0) - (b.done ? 1 : 0) || b.ts - a.ts;
+  });
+  var open = list.filter(function(e){ return !e.done; }).length;
+  var c = $('#memoCount'); if(c) c.textContent = open ? (open + ' 项待完成') : '全部完成 ✔';
+  var emp = $('#memoEmpty'); if(emp) emp.style.display = list.length ? 'none' : 'block';
+  var box = $('#memoList'); if(!box) return;
+  box.innerHTML = list.map(function(e){
+    return '<div class="healthItem">' +
+      '<button onclick="toggleMemo(\'' + e.id + '\')" style="width:20px;height:20px;border-radius:6px;border:1.5px solid ' + (e.done ? 'var(--acc)' : 'var(--line2)') + ';background:' + (e.done ? 'var(--acc)' : 'transparent') + ';flex:none;display:grid;place-items:center;color:#0A0F05;font-size:12px;font-weight:800;padding:0">' + (e.done ? '✓' : '') + '</button>' +
+      '<span class="hiName" style="flex:1;font-weight:500;' + (e.done ? 'text-decoration:line-through;color:var(--sub2)' : '') + '">' + esc(e.text) + '</span>' +
+      '<span style="font-size:10px;color:var(--sub2);flex:none">' + fmtTime(e.ts) + '</span>' +
+      '<button class="memDel" style="position:static" onclick="delMemo(\'' + e.id + '\')">✕</button></div>';
+  }).join('');
+}
+function addMemo(){
+  var v = ($('#memoInput').value || '').trim();
+  if(!v){ toast('写点什么'); return; }
+  S.memo.push({ id:uid(), text:v.slice(0, 80), done:false, ts:Date.now() });
+  $('#memoInput').value = '';
+  save(); renderMemo();
+  toast('📝 已加入备忘录');
+}
+function toggleMemo(id){
+  var e = S.memo.filter(function(x){ return x.id === id; })[0];
+  if(!e) return;
+  e.done = !e.done;
+  save(); renderMemo();
+  if(e.done) toast('✔ 完成一项');
+}
+function delMemo(id){
+  S.memo = S.memo.filter(function(e){ return e.id !== id; });
+  save(); renderMemo();
+}
+
+function renderMem(){
+  var q = ($('#memSearch').value || '').trim();
+  var list = S.memories.filter(function(m){
+    if(memFilter !== '全部' && m.cat !== memFilter) return false;
+    if(q && m.text.indexOf(q) === -1 && m.cat.indexOf(q) === -1) return false;
+    return true;
+  });
+  var week = 0;
+  for(var i=0;i<7;i++){ var dt = new Date(); dt.setDate(dt.getDate()-i);
+    S.memories.forEach(function(m){ if(m.date === dstr(dt)) week++; }); }
+  $('#memStats').innerHTML =
+    '<div class="statBox"><div class="v">' + S.memories.length + '</div><div class="k">记忆总数</div></div>' +
+    '<div class="statBox"><div class="v">' + week + '</div><div class="k">本周新增</div></div>' +
+    '<div class="statBox"><div class="v">' + (S.settings.autoMem ? 'ON' : 'OFF') + '</div><div class="k">自动提取</div></div>';
+  $('#memSumBotName').textContent = botName();
+  $('#memSumTxt').innerHTML =
+    '你正在追求<b style="color:var(--acc)">薄肌 + 搏击</b>双资产，睡眠与饮水是底线指标；' +
+    '决策风格偏<b style="color:var(--cyan)">「先开图，再出兵」</b>，重大选择前要补足样本量；' +
+    '财富观认同<b style="color:var(--orange)">「先自由，后财富」</b>，保持选择权优先于存款数字。' +
+    '（本摘要由' + botName() + '根据 ' + S.memories.length + ' 条记忆生成）';
+  var cats = ['全部'].concat(Object.keys(MEM_CATS));
+  $('#memFilters').innerHTML = cats.map(function(c){
+    var col = MEM_CATS[c] ? MEM_CATS[c].c : 'var(--acc)';
+    var on = memFilter === c;
+    return '<button class="quickC" style="' + (on ? 'color:'+col+';border-color:'+col : '') + '" onclick="memFilter=\'' + c + '\';renderMem()">' + c + '</button>';
+  }).join('');
+  $('#memEmpty').style.display = list.length ? 'none' : 'block';
+  renderDiet();
+  renderMemo();
+  $('#memList').innerHTML = list.map(function(m){
+    var col = (MEM_CATS[m.cat] || {c:'var(--acc)'}).c;
+    return '<div class="memCard" style="border-left-color:' + col + '">' +
+      '<button class="memDel" onclick="delMem(\'' + m.id + '\')">✕</button>' +
+      '<div class="mText">' + esc(m.text) + '</div>' +
+      '<div class="memMeta"><span class="memCat" style="color:' + col + ';background:' + col + '22">' + m.cat + '</span>' +
+      '<span>' + (m.src === 'ai' ? '🤖 对话提取' : '✍️ 手动') + '</span>' +
+      '<span class="memStars">' + '★'.repeat(m.imp) + '</span>' +
+      '<span style="margin-left:auto">' + m.date + '</span></div></div>';
+  }).join('');
+}
+
+
+/* ============ 资产 / 负债快照 ============ */
+function snapList(){ return S.snapshots.slice().sort(function(a,b){ return a.ts - b.ts; }); }
+function latestSnap(){ var l = snapList(); return l.length ? l[l.length-1] : null; }
+function fmtMoney(n){
+  var a = Math.abs(n);
+  if(a >= 10000) return (n/10000).toFixed(a >= 1000000 ? 0 : 1).replace(/\.0$/,'') + '万';
+  return String(Math.round(n));
+}
+function parseAmount(s){
+  var m = String(s || '').replace(/[,，¥￥\s]/g,'').match(/^(\d+(?:\.\d+)?)(万|w|k|千)?$/i);
+  if(!m) return 0;
+  var v = parseFloat(m[1]);
+  if(/万|w/i.test(m[2])) v *= 10000; else if(/k/i.test(m[2])) v *= 1000; else if(/千/.test(m[2])) v *= 1000;
+  return Math.round(v);
+}
+function renderAsset(){
+  var list = snapList();
+  var last = latestSnap();
+  var prev = list.length > 1 ? list[list.length-2] : null;
+  var net = last ? last.assets - last.debts : 0;
+  var dNet = (last && prev) ? net - (prev.assets - prev.debts) : 0;
+  $('#assetSummary').innerHTML = last ?
+    '<div style="display:flex;gap:9px">' +
+    '<div style="flex:1;background:var(--card2);border-radius:13px;padding:11px 12px"><div style="font-size:10.5px;color:var(--sub2)">总资产</div><div style="font-size:19px;font-weight:800;color:var(--acc);margin-top:3px">¥' + fmtMoney(last.assets) + '</div></div>' +
+    '<div style="flex:1;background:var(--card2);border-radius:13px;padding:11px 12px"><div style="font-size:10.5px;color:var(--sub2)">总负债</div><div style="font-size:19px;font-weight:800;color:var(--bad);margin-top:3px">¥' + fmtMoney(last.debts) + '</div></div>' +
+    '<div style="flex:1;background:var(--card2);border-radius:13px;padding:11px 12px"><div style="font-size:10.5px;color:var(--sub2)">净资产</div><div style="font-size:19px;font-weight:800;color:' + (net >= 0 ? 'var(--cyan)' : 'var(--bad)') + ';margin-top:3px">¥' + fmtMoney(net) + '</div></div>' +
+    '</div><div style="font-size:11px;color:var(--sub2);margin-top:9px">快照日期 ' + last.date +
+    (prev ? ' · 较上期 <b style="color:' + (dNet >= 0 ? 'var(--acc)' : 'var(--bad)') + '">' + (dNet >= 0 ? '+' : '') + fmtMoney(dNet) + '</b>' : '') + '</div>'
+    : '<div style="font-size:12.5px;color:var(--sub2);line-height:1.7">还没有快照。<br>记录当前的总资产和总负债，曲线会从第一次快照开始生长。</div>';
+  renderSnapshotChart();
+  var chipsBox = $('#snapChips');
+  var l2 = snapList();
+  chipsBox.innerHTML = l2.length
+    ? '<div style="font-size:10.5px;color:var(--sub2);margin:10px 0 7px">点日期可修改对应时刻的快照</div>' +
+      '<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">' +
+      l2.map(function(e, i){
+        var on = i === l2.length - 1;
+        return '<button class="quickC" style="flex:none;' + (on ? 'color:var(--acc);border-color:var(--acc)' : '') + '" onclick="openEditSnapshot(\'' + e.id + '\')">' + e.date.slice(5) + '</button>';
+      }).join('') + '</div>'
+    : '';
+  }
+function renderSnapshotChart(){
+  var box = $('#assetChart');
+  var list = snapList();
+  if(!list.length){ box.innerHTML = '<div style="color:var(--sub2);font-size:12px;text-align:center;padding:20px 0">暂无数据，记第一笔快照后这里会出现曲线</div>'; return; }
+  var W = 320, H = 150, PL = 48, PR = 10, PT = 12, PB = 22;
+  var iw = W - PL - PR, ih = H - PT - PB;
+  var series = [
+    { k:'assets', name:'总资产', col:'#A6FF3F', w:2 },
+    { k:'debts',  name:'总负债', col:'#FF5C5C', w:1.6 },
+    { k:'net',    name:'净资产', col:'#22D3EE', w:2.4 }
+  ];
+  var all = [];
+  list.forEach(function(e){ all.push(e.assets, e.debts, e.assets - e.debts); });
+  var min = Math.min.apply(null, all), max = Math.max.apply(null, all);
+  if(min === max){ min -= 1; max += 1; }
+  var pad = (max - min) * 0.12; min -= pad; max += pad;
+  function x(i){ return PL + (list.length === 1 ? iw/2 : i/(list.length-1)*iw); }
+  function y(v){ return PT + (1 - (v-min)/(max-min))*ih; }
+  var ticks = [0, .5, 1].map(function(f){
+    var v = min + (max-min)*f, yy = PT + ih - f*ih;
+    return '<line x1="' + PL + '" y1="' + yy.toFixed(1) + '" x2="' + (W-PR) + '" y2="' + yy.toFixed(1) + '" stroke="#1F2B3A" stroke-width="1"/>' +
+      '<text x="' + (PL-6) + '" y="' + (yy+3.5).toFixed(1) + '" fill="#5B6E84" font-size="9" text-anchor="end">' + fmtMoney(v) + '</text>';
+  }).join('');
+  var idx = [0, Math.floor((list.length-1)/2), list.length-1].filter(function(v,i,a){ return a.indexOf(v) === i; });
+  var xl = idx.map(function(i){
+    return '<text x="' + x(i).toFixed(1) + '" y="' + (H-6) + '" fill="#5B6E84" font-size="9" text-anchor="middle">' + list[i].date.slice(5) + '</text>';
+  }).join('');
+  var paths = '';
+  series.forEach(function(s){
+    var pts = list.map(function(e, i){
+      var v = s.k === 'net' ? e.assets - e.debts : e[s.k];
+      return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1);
+    }).join(' ');
+    var lastE = list[list.length-1];
+    var lv = s.k === 'net' ? lastE.assets - lastE.debts : lastE[s.k];
+    paths += '<path d="' + pts + '" fill="none" stroke="' + s.col + '" stroke-width="' + s.w + '" stroke-linejoin="round"/>' +
+      '<circle cx="' + x(list.length-1).toFixed(1) + '" cy="' + y(lv).toFixed(1) + '" r="3.4" fill="' + s.col + '"/>';
+  });
+  /* 净资产线上的可点击热区：点/悬停可查看并修改该时刻快照 */
+  var hits = list.map(function(e, i){
+    var v = e.assets - e.debts;
+    return '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(v).toFixed(1) + '" r="12" fill="transparent" style="cursor:pointer" onclick="openEditSnapshot(\'' + e.id + '\')">' +
+      '<title>' + e.date + '｜资产 ' + fmtMoney(e.assets) + '｜负债 ' + fmtMoney(e.debts) + '｜净资产 ' + fmtMoney(v) + '（点击修改）</title></circle>';
+  }).join('');
+  box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto">' + ticks + paths + hits + xl + '</svg>' +
+    '<div style="display:flex;gap:13px;justify-content:center;font-size:10.5px;color:var(--sub2);margin-top:4px">' +
+    series.map(function(s){ return '<span style="color:' + s.col + '">● ' + s.name + '</span>'; }).join('') +
+    '<span>共 ' + list.length + ' 次快照</span></div>' +
+    '<div style="text-align:center;margin-top:9px"><button class="miniBtn ghost" style="font-size:11px;padding:6px 12px" onclick="delLatestSnapshot()">记错了？删除最近一次</button></div>';
+}
+function openAddAsset(){
+  openModal('<h3>📸 记一次快照</h3><div class="mSub">只记当前时刻的总资产和总负债，不做收支明细。曲线按快照时间变化。</div>' +
+    '<div class="fLabel">📅 日期</div><input type="date" id="nsDate">' +
+    '<div class="fLabel">💰 总资产（元，支持 30万 / 300000 / 3k）</div><input type="text" id="nsAssets" placeholder="如 300000 或 30万">' +
+    '<div class="fLabel">💳 总负债（元，没有填 0 或留空）</div><input type="text" id="nsDebts" placeholder="如 100000 或 10万">' +
+    '<div class="fLabel">📝 备注（可选）</div><input type="text" id="nsNote" placeholder="如：发完年终奖后">' +
+    '<div class="mBtns"><button class="ghost" onclick="closeModal()">取消</button>' +
+    '<button class="primary" onclick="saveSnapshot()">记录</button></div>');
+  $('#nsDate').value = dstr();
+  setTimeout(function(){ $('#nsAssets').focus(); }, 100);
+}
+function saveSnapshot(){
+  var a = parseAmount($('#nsAssets').value);
+  var d = parseAmount($('#nsDebts').value);
+  if(!a && !d){ toast('至少填总资产或总负债'); return; }
+  var dt = $('#nsDate').value || dstr();
+  S.snapshots.push({ id:uid(), date:dt, assets:a, debts:d, note:($('#nsNote').value || '').trim(), ts:new Date(dt + 'T12:00:00').getTime(), src:'user' });
+  save(); renderAsset(); closeModal();
+  toast('📸 快照已记录');
+}
+function delSnapshot(id){
+  S.snapshots = S.snapshots.filter(function(e){ return e.id !== id; });
+  save(); renderAsset(); toast('已删除');
+}
+function openEditSnapshot(id){
+  var e = S.snapshots.filter(function(x){ return x.id === id; })[0];
+  if(!e) return;
+  openModal('<h3>✏️ 修改快照</h3><div class="mSub">原记录：' + e.date + ' · 资产 ¥' + fmtMoney(e.assets) + ' · 负债 ¥' + fmtMoney(e.debts) + '</div>' +
+    '<div class="fLabel">📅 日期</div><input type="date" id="esDate" value="' + e.date + '">' +
+    '<div class="fLabel">💰 总资产（元，当前 ' + e.assets + '）</div><input type="text" id="esAssets" value="' + e.assets + '">' +
+    '<div class="fLabel">💳 总负债（元，当前 ' + e.debts + '）</div><input type="text" id="esDebts" value="' + e.debts + '">' +
+    '<div class="fLabel">📝 备注（可选）</div><input type="text" id="esNote" value="' + esc(e.note || '') + '">' +
+    '<div class="mBtns"><button class="ghost" onclick="closeModal()">取消</button>' +
+    '<button class="primary" onclick="saveSnapshotEdit(\'' + id + '\')">保存修改</button></div>' +
+    '<div style="text-align:center;margin-top:10px"><button class="miniBtn danger" onclick="confirmDelSnapshot(\'' + id + '\')">删除这次快照</button></div>');
+}
+function saveSnapshotEdit(id){
+  var e = S.snapshots.filter(function(x){ return x.id === id; })[0];
+  if(!e) return;
+  var a = parseAmount($('#esAssets').value), d = parseAmount($('#esDebts').value);
+  if(!a && !d){ toast('至少填总资产或总负债'); return; }
+  var dt = $('#esDate').value || e.date;
+  e.date = dt; e.assets = a; e.debts = d;
+  e.note = ($('#esNote').value || '').trim();
+  e.ts = new Date(dt + 'T12:00:00').getTime();
+  save(); renderAsset(); closeModal(); toast('✅ 快照已更新');
+}
+function confirmDelSnapshot(id){
+  var e = S.snapshots.filter(function(x){ return x.id === id; })[0];
+  if(!e) return;
+  openModal('<h3>删除这次快照？</h3><div class="mSub">' + e.date + ' · 资产 ¥' + fmtMoney(e.assets) + ' · 负债 ¥' + fmtMoney(e.debts) + '<br>删除后曲线会重算，不可恢复。</div>' +
+    '<div class="mBtns"><button class="ghost" onclick="openEditSnapshot(\'' + id + '\')">返回编辑</button>' +
+    '<button class="primary" style="background:linear-gradient(135deg,#FF7B7B,#E63838);color:#fff" onclick="doDelSnapFromEdit(\'' + id + '\')">确认删除</button></div>');
+}
+function doDelSnapFromEdit(id){
+  delSnapshot(id); closeModal(); toast('已删除该次快照');
+}
+function delLatestSnapshot(){
+  var l = snapList();
+  if(!l.length) return;
+  var last = l[l.length-1];
+  openModal('<h3>删除最近一次快照？</h3><div class="mSub">' + last.date + ' · 资产 ¥' + fmtMoney(last.assets) + ' · 负债 ¥' + fmtMoney(last.debts) + '</div>' +
+    '<div class="mBtns"><button class="ghost" onclick="closeModal()">取消</button>' +
+    '<button class="primary" style="background:linear-gradient(135deg,#FF7B7B,#E63838);color:#fff" onclick="doDelLatest(\'' + last.id + '\')">删除</button></div>');
+}
+function doDelLatest(id){
+  S.snapshots = S.snapshots.filter(function(e){ return e.id !== id; });
+  save(); renderAsset(); closeModal(); toast('已删除该次快照');
+}
+
+/* ============ 生命倒计时 ============ */
+function lifeEnd(){
+  if(!S.user.birthday) return null;
+  var e = new Date(S.user.birthday + 'T00:00:00');
+  e.setFullYear(e.getFullYear() + (parseInt(S.user.lifespan) || 80));
+  return e;
+}
+function pad2(n){ return String(n).padStart(2, '0'); }
+function tickLife(){
+  var el = document.getElementById('lifeCountdown');
+  if(!el) return;
+  var end = lifeEnd();
+  if(!end){
+    el.innerHTML = '<div style="font-size:12.5px;color:var(--sub2);line-height:1.9">还没设置生日。<br>点右上角「设置」填上生日和预期寿命（默认 80 岁），这里就开始倒计时。</div>';
+    return;
+  }
+  var ms = end.getTime() - Date.now();
+  if(ms <= 0){
+    el.innerHTML = '<div style="text-align:center;padding:6px 0"><div style="font-size:22px;font-weight:800;color:var(--bad)">已超过预期寿命</div>' +
+      '<div style="font-size:11.5px;color:var(--sub2);margin-top:5px">每一个多出来的日子都是赚的。去「设置」把预期寿命调高。</div></div>';
+    return;
+  }
+  var days = Math.floor(ms / 86400000);
+  var h = Math.floor(ms / 3600000) % 24;
+  var m = Math.floor(ms / 60000) % 60;
+  var s = Math.floor(ms / 1000) % 60;
+  var b = new Date(S.user.birthday + 'T00:00:00');
+  var pct = clamp((Date.now() - b.getTime()) / (end.getTime() - b.getTime()) * 100, 0, 100);
+  var lived = Math.floor((Date.now() - b.getTime()) / 86400000);
+  el.innerHTML =
+    '<div style="display:flex;align-items:baseline;gap:7px">' +
+    '<span style="font-size:36px;font-weight:800;color:var(--acc);line-height:1;font-variant-numeric:tabular-nums">' + days.toLocaleString() + '</span>' +
+    '<span style="font-size:13px;color:var(--sub);font-weight:600">天</span>' +
+    '<span style="font-size:21px;font-weight:700;color:var(--cyan);margin-left:10px;font-variant-numeric:tabular-nums;letter-spacing:1px">' + pad2(h) + ':' + pad2(m) + ':' + pad2(s) + '</span>' +
+    '</div>' +
+    '<div style="font-size:11px;color:var(--sub2);margin-top:6px">距离 ' + (parseInt(S.user.lifespan) || 80) + ' 岁生日（' + dstr(end) + '）还有 ' + days.toLocaleString() + ' 天 · 每秒都在倒数</div>' +
+    '<div style="margin-top:11px">' +
+    '<div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--sub2);margin-bottom:5px"><span>人生进度</span><span>' + pct.toFixed(1) + '%</span></div>' +
+    '<div style="height:7px;border-radius:4px;background:#1C2735;overflow:hidden"><div style="height:100%;width:' + pct.toFixed(2) + '%;background:linear-gradient(90deg,#A6FF3F,#22D3EE);border-radius:4px"></div></div>' +
+    '<div style="font-size:10.5px;color:var(--sub2);margin-top:5px">已度过 ' + lived.toLocaleString() + ' 天</div>' +
+    '</div>';
+}
+function openRenameBot(){
+  openModal('<h3>🦾 机器人名字</h3><div class="mSub">它怎么称呼自己——对话、记忆摘要、提醒里都会用这个名字。</div>' +
+    '<input type="text" id="bnInput" maxlength="8" placeholder="小薄" value="' + esc(botName()) + '">' +
+    '<div class="mBtns"><button class="ghost" onclick="closeModal()">取消</button>' +
+    '<button class="primary" onclick="saveBotName()">保存</button></div>');
+  setTimeout(function(){ $('#bnInput').focus(); }, 100);
+}
+function saveBotName(){
+  var v = ($('#bnInput').value || '').trim().slice(0, 8);
+  if(!v){ toast('名字不能为空'); return; }
+  S.settings.botName = v;
+  save(); renderAll(); closeModal();
+  toast('🦾 以后它叫「' + v + '」了');
+}
+function openEditProfile(){
+  openModal('<h3>⚙️ 我的资料</h3><div class="mSub">生日和预期寿命用于生命倒计时；性别会进入小薄对你的认知。</div>' +
+    '<input type="text" id="pfName" placeholder="称呼" value="' + esc(S.user.name || '') + '">' +
+    '<div style="font-size:11.5px;color:var(--sub2);margin:2px 0 7px">预期平均寿命（岁）</div>' +
+    '<input type="text" id="pfLifespan" placeholder="80" value="' + (S.user.lifespan || 80) + '">' +
+    '<div style="font-size:11.5px;color:var(--sub2);margin:2px 0 7px">生日</div>' +
+    '<input type="date" id="pfBirthday" value="' + (S.user.birthday || '') + '">' +
+    '<div style="font-size:11.5px;color:var(--sub2);margin:2px 0 7px">性别</div>' +
+    '<div class="seg" id="pfGender" style="margin-bottom:13px">' +
+    '<button id="pfMale" onclick="pickGender(\'男\')">男</button>' +
+    '<button id="pfFemale" onclick="pickGender(\'女\')">女</button>' +
+    '<button id="pfSecret" onclick="pickGender(\'\')">保密</button></div>' +
+    '<div class="mBtns"><button class="ghost" onclick="closeModal()">取消</button>' +
+    '<button class="primary" onclick="saveProfile()">保存</button></div>');
+  window._pfGender = S.user.gender || '';
+  paintGender();
+}
+function pickGender(g){ window._pfGender = g; paintGender(); }
+function paintGender(){
+  $('#pfMale').classList.toggle('on', window._pfGender === '男');
+  $('#pfFemale').classList.toggle('on', window._pfGender === '女');
+  $('#pfSecret').classList.toggle('on', window._pfGender === '');
+}
+function saveProfile(){
+  var name = ($('#pfName').value || '').trim();
+  var ls = parseInt(($('#pfLifespan').value || '').replace(/[^\d]/g,''));
+  S.user.name = name || S.user.name;
+  S.user.lifespan = (ls && ls > 0 && ls < 150) ? ls : 80;
+  S.user.birthday = ($('#pfBirthday').value || '').trim();
+  S.user.gender = window._pfGender || '';
+  save(); renderMe(); tickLife(); renderHeader(); closeModal();
+  toast('✅ 资料已更新');
+}
+
+/* ============ 健康档案 ============ */
+var LEVELS = { '正常':'ok', '关注':'watch', '异常':'warn2', '疾病':'bad' };
+function bmiOf(h, w){ return h > 0 ? w / Math.pow(h/100, 2) : 0; }
+function bmiLabel(b){
+  if(b < 18.5) return '偏瘦';
+  if(b < 24) return '正常';
+  if(b < 28) return '超重';
+  return '肥胖';
+}
+function renderHealth(){
+  var h = S.health;
+  var box = $('#healthBody');
+  if(!h || (!h.summary && !(h.items && h.items.length))){
+    $('#healthSrcTxt').textContent = '未建立';
+    box.innerHTML = '<div style="font-size:12.5px;color:var(--sub2);line-height:1.8">还没有健康档案。<br>上传一次体检报告让' + botName() + '总结，或手动录入你目前的身体状况。</div>';
+    return;
+  }
+  $('#healthSrcTxt').textContent = (h.source === 'ai' ? '🤖 AI 总结' : '✍️ 手动录入') + ' · ' + (h.updatedAt ? dstr(new Date(h.updatedAt)) : '');
+  var html = '';
+  if(h.summary) html += '<div style="font-size:13px;line-height:1.75;color:var(--txt);margin-bottom:10px">' + esc(h.summary).replace(/\n/g,'<br>') + '</div>';
+  if(h.items && h.items.length){
+    html += '<div class="secTitle" style="margin:4px 0 4px">异常 / 疾病清单</div>';
+    html += h.items.map(function(it){
+      var lv = LEVELS[it.level] || 'watch';
+      return '<div class="healthItem"><span class="hiName">' + esc(it.name) + '</span>' +
+        '<span class="lvl lvl-' + lv + '">' + esc(it.level || '关注') + '</span>' +
+        (it.system ? '<span style="font-size:10.5px;color:var(--sub2)">' + esc(it.system) + '</span>' : '') +
+        (it.note ? '<span class="hiNote">' + esc(it.note) + '</span>' : '') + '</div>';
+    }).join('');
+  } else {
+    html += '<div style="font-size:12px;color:var(--acc)">✔ 清单为空：目前没有记录的异常项</div>';
+  }
+  box.innerHTML = html;
+}
+function openEditHealth(){
+  var h = S.health || { summary:'', items:[] };
+  var lines = (h.items || []).map(function(it){
+    return [it.name, it.system, it.level, it.note].filter(function(x){ return x; }).join('|');
+  }).join('\n');
+  openModal('<h3>🩺 健康档案</h3><div class="mSub">写一段目前身体状况的总结；下面的清单每行一项，格式：名称|系统|等级|备注（等级：正常/关注/异常/疾病）</div>' +
+    '<textarea id="ehSummary" rows="4" placeholder="例：整体尚可，主要有脂肪肝和尿酸偏高，需控糖控酒…">' + esc(h.summary || '') + '</textarea>' +
+    '<textarea id="ehItems" rows="5" placeholder="轻度脂肪肝|肝|关注|B超提示&#10;尿酸偏高|代谢|关注|480">' + esc(lines) + '</textarea>' +
+    '<div class="mBtns"><button class="ghost" onclick="closeModal()">取消</button>' +
+    '<button class="primary" onclick="saveHealth()">保存</button></div>');
+}
+function saveHealth(){
+  var summary = ($('#ehSummary').value || '').trim();
+  var items = ($('#ehItems').value || '').split('\n').map(function(l){
+    l = l.trim(); if(!l) return null;
+    var p = l.split('|').map(function(x){ return x.trim(); });
+    if(!p[0]) return null;
+    return { name:p[0], system:p[1] || '', level:(LEVELS[p[2]] ? p[2] : '关注'), note:p[3] || '' };
+  }).filter(Boolean);
+  S.health = { summary:summary, items:items, updatedAt:Date.now(), source:'user' };
+  save(); renderHealth(); closeModal(); toast('🩺 健康档案已更新');
+}
+/* ---- 上传体检报告 → AI 总结 ---- */
+function onReportFile(input){
+  var f = input.files && input.files[0];
+  input.value = '';
+  if(!f) return;
+  if(!S.settings.apiKey){ toast('体检报告 AI 总结需要先接入 API（我的 → StepCode 接入）'); return; }
+    toast('📤 ' + botName() + '正在读报告…');
+  compressImage(f, function(dataUrl){
+    analyzeReport(dataUrl).then(function(res){
+      S.health = { summary:res.summary, items:res.items, updatedAt:Date.now(), source:'ai' };
+      save(); renderHealth();
+      toast('🤖 体检报告总结完成，已存入健康档案');
+    }).catch(function(e){
+      toast('⚠️ 分析失败：' + e.message);
+    });
+  });
+}
+function compressImage(file, cb){
+  var reader = new FileReader();
+  reader.onload = function(){
+    var img = new Image();
+    img.onload = function(){
+      var max = 1600, w = img.width, h = img.height;
+      if(w > max || h > max){
+        var r = Math.min(max/w, max/h);
+        w = Math.round(w*r); h = Math.round(h*r);
+      }
+      var cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      cb(cv.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = function(){ cb(reader.result); };
+    img.src = reader.result;
+  };
+  reader.onerror = function(){ cb(''); };
+  reader.readAsDataURL(file);
+}
+function analyzeReport(dataUrl){
+  var prompt = '这是我的体检报告，请通读并提取所有异常指标、诊断和疾病风险，用中文回答。' +
+    '只输出一个 JSON 对象（不要 markdown 代码块），格式：' +
+    '{"summary":"一段话总结目前身体状况、最需要关注的风险和建议（150字内）","items":[{"name":"异常或疾病名称","system":"所属系统","level":"正常/关注/异常/疾病 四选一","note":"关键指标值或建议"}]}。' +
+    '确实没有异常时 items 给空数组，summary 说明整体良好。';
+  var meta = $('#healthGenMeta');
+  var t0 = Date.now(), chars = 0;
+  if(meta){
+    meta.style.display = 'block';
+    meta.textContent = '⏳ 小薄正在读报告… 0s';
+    var tm = setInterval(function(){
+      var s = Math.round((Date.now() - t0) / 1000);
+      meta.textContent = '⏳ 小薄正在读报告… ' + s + 's · 已接收 ' + chars + ' 字' + (s >= 45 ? ' · 没卡住' : '');
+    }, 1000);
+    setTimeout(function(){ clearInterval(tm); }, 600000);
+  }
+  return fetch((S.settings.apiBase || 'https://api.stepfun.com/v1').replace(/\/+$/,'') + '/chat/completions', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + S.settings.apiKey },
+    body: JSON.stringify({
+      model: S.settings.model,
+      reasoning_effort: 'low',
+      stream: true,
+      messages: [{ role:'user', content:[
+        { type:'text', text:prompt },
+        { type:'image_url', image_url:{ url:dataUrl } }
+      ]}],
+    })
+  }).then(function(res){
+    if(!res.ok) return res.text().then(function(t){ var e = new Error('HTTP ' + res.status); e.body = t; throw e; });
+    return streamGenerate(res, function(t){ chars += t.length; });
+  }).then(function(r){
+    var txt = r.content || '';
+    if(meta) meta.style.display = 'none';
+    var obj = extractJsonObj(txt, 'items') || extractJsonObj(txt, 'summary');
+    if(!obj){ var e = new Error('无法解析体检结果'); e.raw = (txt || r.reasoning || '').slice(0, 60); throw e; }
+    var items = (Array.isArray(obj.items) ? obj.items : []).map(function(it){
+      return { name:String(it.name || '').slice(0,40), system:String(it.system || '').slice(0,12), level:(LEVELS[it.level] ? it.level : '关注'), note:String(it.note || '').slice(0,60) };
+    }).filter(function(it){ return it.name; });
+    return { summary:String(obj.summary || '').slice(0, 600), items:items };
+  });
+}
+
+/* ============ 身体数据快照 ============ */
+function bodyList(){ return S.body.slice().sort(function(a,b){ return a.ts - b.ts; }); }
+function latestBody(){ var l = bodyList(); return l.length ? l[l.length-1] : null; }
+function fmtNum(v, d){ return v === undefined || v === null || v === '' || isNaN(v) ? '—' : Number(v).toFixed(d === undefined ? 1 : d); }
+function renderBody(){
+  var last = latestBody();
+  var prev = bodyList().length > 1 ? bodyList()[bodyList().length-2] : null;
+  var box = $('#bodySummary');
+  if(!last){
+    box.innerHTML = '<div style="font-size:12.5px;color:var(--sub2);line-height:1.8">还没有身体数据。<br>记录身高/体重/体脂率，曲线会从第一次快照开始生长。</div>';
+  } else {
+    var bmi = bmiOf(last.height, last.weight);
+    function delta(cur, old, unit){
+      if(old === undefined || old === null || old === '' || cur === undefined || cur === '') return '';
+      var d = cur - old;
+      if(Math.abs(d) < 0.05) return '<span style="color:var(--sub2)">持平</span>';
+      return '<span style="color:' + (d > 0 ? 'var(--orange)' : 'var(--acc)') + '">' + (d > 0 ? '▲ +' : '▼ ') + fmtNum(Math.abs(d)) + unit + '</span>';
+    }
+    box.innerHTML =
+      '<div style="display:flex;gap:9px">' +
+      '<div style="flex:1;background:var(--card2);border-radius:13px;padding:11px 12px"><div style="font-size:10.5px;color:var(--sub2)">身高</div><div style="font-size:19px;font-weight:800;margin-top:3px">' + fmtNum(last.height, 0) + '<span style="font-size:11px;color:var(--sub2)"> cm</span></div></div>' +
+      '<div style="flex:1;background:var(--card2);border-radius:13px;padding:11px 12px"><div style="font-size:10.5px;color:var(--sub2)">体重</div><div style="font-size:19px;font-weight:800;margin-top:3px">' + fmtNum(last.weight) + '<span style="font-size:11px;color:var(--sub2)"> kg</span></div><div style="font-size:10.5px;margin-top:3px">' + (prev ? delta(last.weight, prev.weight, 'kg') : '') + '</div></div>' +
+      '<div style="flex:1;background:var(--card2);border-radius:13px;padding:11px 12px"><div style="font-size:10.5px;color:var(--sub2)">体脂率</div><div style="font-size:19px;font-weight:800;color:var(--cyan);margin-top:3px">' + fmtNum(last.fat) + '<span style="font-size:11px;color:var(--sub2)"> %</span></div><div style="font-size:10.5px;margin-top:3px">' + (prev ? delta(last.fat, prev.fat, '%') : '') + '</div></div>' +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--sub2);margin-top:9px">BMI <b style="color:var(--txt)">' + fmtNum(bmi) + '</b>（' + bmiLabel(bmi) + '）' +
+            ' · 快照于 ' + last.date + '</div>';
+  }
+  renderBodyChart();
+  var l2 = bodyList();
+  $('#bodyChips').innerHTML = l2.length
+    ? '<div style="font-size:10.5px;color:var(--sub2);margin:10px 0 7px">点日期可修改对应时刻的快照</div>' +
+      '<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">' +
+      l2.map(function(e, i){
+        var on = i === l2.length - 1;
+        return '<button class="quickC" style="flex:none;' + (on ? 'color:var(--acc);border-color:var(--acc)' : '') + '" onclick="openEditBody(\'' + e.id + '\')">' + e.date.slice(5) + '</button>';
+      }).join('') + '</div>'
+    : '';
+}
+function renderBodyChart(){
+  var box = $('#bodyChart');
+  var list = bodyList();
+  if(!list.length){ box.innerHTML = '<div style="color:var(--sub2);font-size:12px;text-align:center;padding:20px 0">暂无数据，记第一笔身体快照后这里会出现曲线</div>'; return; }
+  var W = 320, H = 150, PL = 40, PR = 34, PT = 12, PB = 22;
+  var iw = W - PL - PR, ih = H - PT - PB;
+  var hasFat = list.some(function(e){ return e.fat > 0; });
+  var ws = list.map(function(e){ return e.weight; });
+  var wMin = Math.min.apply(null, ws), wMax = Math.max.apply(null, ws);
+  if(wMin === wMax){ wMin -= 1; wMax += 1; }
+  var wp = (wMax - wMin) * 0.15; wMin -= wp; wMax += wp;
+  var fs = list.filter(function(e){ return e.fat > 0; }).map(function(e){ return e.fat; });
+  var fMin = 0, fMax = 1;
+  if(hasFat){
+    fMin = Math.min.apply(null, fs); fMax = Math.max.apply(null, fs);
+    if(fMin === fMax){ fMin -= 1; fMax += 1; }
+    var fp = (fMax - fMin) * 0.15; fMin -= fp; fMax += fp;
+  }
+  function x(i){ return PL + (list.length === 1 ? iw/2 : i/(list.length-1)*iw); }
+  function yL(v){ return PT + (1 - (v-wMin)/(wMax-wMin))*ih; }
+  function yR(v){ return PT + (1 - (v-fMin)/(fMax-fMin))*ih; }
+  var ticks = [0, .5, 1].map(function(f){
+    var wv = wMin + (wMax-wMin)*f, yy = PT + ih - f*ih;
+    var out = '<line x1="' + PL + '" y1="' + yy.toFixed(1) + '" x2="' + (W-PR) + '" y2="' + yy.toFixed(1) + '" stroke="#1F2B3A" stroke-width="1"/>' +
+      '<text x="' + (PL-5) + '" y="' + (yy+3.5).toFixed(1) + '" fill="#5B6E84" font-size="9" text-anchor="end">' + fmtNum(wv) + '</text>';
+    if(hasFat){
+      var fv = fMin + (fMax-fMin)*f;
+      out += '<text x="' + (W-PR+5) + '" y="' + (yy+3.5).toFixed(1) + '" fill="#5B6E84" font-size="9" text-anchor="start">' + fmtNum(fv) + '</text>';
+    }
+    return out;
+  }).join('');
+  var idx = [0, Math.floor((list.length-1)/2), list.length-1].filter(function(v,i,a){ return a.indexOf(v) === i; });
+  var xl = idx.map(function(i){
+    return '<text x="' + x(i).toFixed(1) + '" y="' + (H-6) + '" fill="#5B6E84" font-size="9" text-anchor="middle">' + list[i].date.slice(5) + '</text>';
+  }).join('');
+  var wPts = list.map(function(e, i){ return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + yL(e.weight).toFixed(1); }).join(' ');
+  var paths = '<path d="' + wPts + '" fill="none" stroke="#A6FF3F" stroke-width="2.2" stroke-linejoin="round"/>' +
+    '<circle cx="' + x(list.length-1).toFixed(1) + '" cy="' + yL(list[list.length-1].weight).toFixed(1) + '" r="3.4" fill="#A6FF3F"/>';
+  if(hasFat){
+    var fPts = list.map(function(e, i){ return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + yR(e.fat).toFixed(1); }).join(' ');
+    paths += '<path d="' + fPts + '" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linejoin="round" stroke-dasharray="1 0"/>' +
+      '<circle cx="' + x(list.length-1).toFixed(1) + '" cy="' + yR(list[list.length-1].fat).toFixed(1) + '" r="3.4" fill="#22D3EE"/>';
+  }
+  var hits = list.map(function(e, i){
+    return '<circle cx="' + x(i).toFixed(1) + '" cy="' + yL(e.weight).toFixed(1) + '" r="12" fill="transparent" style="cursor:pointer" onclick="openEditBody(\'' + e.id + '\')">' +
+      '<title>' + e.date + '｜' + fmtNum(e.weight) + 'kg｜体脂 ' + fmtNum(e.fat) + '%（点击修改）</title></circle>';
+  }).join('');
+  var legend = '<span style="color:#A6FF3F">● 体重 kg</span>' + (hasFat ? '<span style="color:#22D3EE">● 体脂率 %</span>' : '') + '<span>共 ' + list.length + ' 次</span>';
+  box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto">' + ticks + paths + hits + xl + '</svg>' +
+    '<div style="display:flex;gap:13px;justify-content:center;font-size:10.5px;color:var(--sub2);margin-top:4px">' + legend + '</div>' +
+    '<div style="text-align:center;margin-top:9px"><button class="miniBtn ghost" style="font-size:11px;padding:6px 12px" onclick="delLatestBody()">记错了？删除最近一次</button></div>';
+}
+function openAddBody(){
+  openModal('<h3>📏 记一次身体快照</h3><div class="mSub">同一时刻的身高/体重/体脂率，曲线按快照时间变化。</div>' +
+    '<div class="fLabel">📅 日期</div><input type="date" id="bdDate">' +
+    '<div class="fLabel">📐 身高（cm，如 175）</div><input type="text" id="bdHeight" placeholder="175">' +
+    '<div class="fLabel">⚖️ 体重（kg，如 73.5）</div><input type="text" id="bdWeight" placeholder="73.5">' +
+    '<div class="fLabel">💧 体脂率（%，如 18.8）</div><input type="text" id="bdFat" placeholder="18.8">' +
+    '<div class="mBtns"><button class="ghost" onclick="closeModal()">取消</button>' +
+    '<button class="primary" onclick="saveBody()">记录</button></div>');
+  var last = latestBody();
+  if(last){ $('#bdHeight').value = last.height; }
+  $('#bdDate').value = dstr();
+  setTimeout(function(){ $('#bdWeight').focus(); }, 100);
+}
+function readBodyInputs(){
+  return {
+    date: ($('#bdDate').value || '').trim(),
+    height: parseAmount($('#bdHeight').value),
+    weight: parseAmount($('#bdWeight').value),
+    fat: parseFloat(($('#bdFat').value || '').replace(/[^\d.]/g,'')) || 0
+  };
+}
+function saveBody(){
+  var v = readBodyInputs();
+  if(!v.weight){ toast('先填体重'); return; }
+  if(!v.date) v.date = dstr();
+  S.body.push({ id:uid(), date:v.date, height:v.height, weight:v.weight, fat:v.fat, ts:new Date(v.date + 'T12:00:00').getTime(), src:'user' });
+  save(); renderBody(); closeModal(); toast('📏 身体快照已记录');
+}
+function openEditBody(id){
+  var e = S.body.filter(function(x){ return x.id === id; })[0];
+  if(!e) return;
+  openModal('<h3>✏️ 修改身体快照</h3><div class="mSub">原记录：' + e.date + ' · ' + fmtNum(e.weight) + 'kg · 体脂 ' + fmtNum(e.fat) + '%</div>' +
+    '<div class="fLabel">📅 日期</div><input type="date" id="bdDate" value="' + e.date + '">' +
+    '<div class="fLabel">📐 身高（cm，当前 ' + (e.height || '—') + '）</div><input type="text" id="bdHeight" value="' + (e.height || '') + '">' +
+    '<div class="fLabel">⚖️ 体重（kg，当前 ' + e.weight + '）</div><input type="text" id="bdWeight" value="' + e.weight + '">' +
+    '<div class="fLabel">💧 体脂率（%，当前 ' + (e.fat || '—') + '）</div><input type="text" id="bdFat" value="' + (e.fat || '') + '">' +
+    '<div class="mBtns"><button class="ghost" onclick="closeModal()">取消</button>' +
+    '<button class="primary" onclick="saveBodyEdit(\'' + id + '\')">保存修改</button></div>' +
+    '<div style="text-align:center;margin-top:10px"><button class="miniBtn danger" onclick="confirmDelBody(\'' + id + '\')">删除这次快照</button></div>');
+}
+function saveBodyEdit(id){
+  var e = S.body.filter(function(x){ return x.id === id; })[0];
+  if(!e) return;
+  var v = readBodyInputs();
+  if(!v.weight){ toast('先填体重'); return; }
+  if(!v.date) v.date = e.date;
+  e.date = v.date; e.height = v.height; e.weight = v.weight; e.fat = v.fat; e.muscle = v.muscle; e.note = v.note;
+  e.ts = new Date(v.date + 'T12:00:00').getTime();
+  save(); renderBody(); closeModal(); toast('✅ 身体快照已更新');
+}
+function confirmDelBody(id){
+  var e = S.body.filter(function(x){ return x.id === id; })[0];
+  if(!e) return;
+  openModal('<h3>删除这次快照？</h3><div class="mSub">' + e.date + ' · ' + fmtNum(e.weight) + 'kg · 体脂 ' + fmtNum(e.fat) + '%<br>删除后曲线会重算，不可恢复。</div>' +
+    '<div class="mBtns"><button class="ghost" onclick="openEditBody(\'' + id + '\')">返回编辑</button>' +
+    '<button class="primary" style="background:linear-gradient(135deg,#FF7B7B,#E63838);color:#fff" onclick="doDelBodyFromEdit(\'' + id + '\')">确认删除</button></div>');
+}
+function doDelBodyFromEdit(id){
+  S.body = S.body.filter(function(x){ return x.id !== id; });
+  save(); renderBody(); closeModal(); toast('已删除该次快照');
+}
+function delLatestBody(){
+  var l = bodyList();
+  if(!l.length) return;
+  confirmDelBody(l[l.length-1].id);
+}
+/* ---------------- 掌舵面板 ---------------- */
+/* ============ 一周训练计划（AI 生成后固定，可编辑；基于器械条件） ============ */
+var WEEKDAYS = ['周一','周二','周三','周四','周五','周六','周日'];
+function todayIdx(){ var w = new Date().getDay(); return w === 0 ? 6 : w - 1; }
+function seedPlan(){
+  var eq = '哑铃一对（5-20kg）、可调节卧推凳、瑜伽垫、小区单杠；无搏击条件';
+  return { days:[
+    { d:'周一', t:'薄肌 · 上肢推（总时长约 50 分钟）', items:[
+      '热身：开合跳 3 分钟 + 肩袖激活 12 次',
+      '哑铃卧推 4 组 × 12 次，组间休 90 秒（选第 12 次略吃力的重量）',
+      '哑铃肩推 3 组 × 12 次，组间休 60 秒',
+      '哑铃三头屈伸 3 组 × 15 次，组间休 45 秒',
+      '拉伸：胸、肩静态拉伸各 30 秒 × 2 组'
+    ]},
+    { d:'周二', t:'薄肌 · 下肢（总时长约 45 分钟）', items:[
+      '热身：原地高抬腿 3 分钟 + 髋绕环 10 次',
+      '高脚杯深蹲 4 组 × 12 次，组间休 90 秒',
+      '罗马尼亚硬拉 3 组 × 12 次，组间休 90 秒（腰背保持平直）',
+      '分腿蹲 3 组 × 10 次/侧，组间休 60 秒（退阶：手扶墙）',
+      '小腿提踵 3 组 × 15 次，组间休 45 秒'
+    ]},
+    { d:'周三', t:'恢复日（总时长约 30 分钟）', items:[
+      '快走或骑行 20 分钟，强度以「能正常说话」为准',
+      '全身拉伸 10 分钟，重点髋前侧和肩背'
+    ]},
+    { d:'周四', t:'薄肌 · 上肢拉（总时长约 50 分钟）', items:[
+      '热身：肩绕环 20 次 + 俯卧撑 1 组 × 10 次激活',
+      '单杠引体向上 4 组 × 8-12 次，组间休 90 秒（退阶：澳式划船）',
+      '单臂哑铃划船 3 组 × 12 次/侧，组间休 60 秒',
+      '哑铃弯举 3 组 × 12 次，组间休 45 秒',
+      '面拉（弹力带）3 组 × 15 次，组间休 45 秒'
+    ]},
+    { d:'周五', t:'核心 + 低强度有氧（总时长约 35 分钟）', items:[
+      '死虫式 3 组 × 10 次/侧，组间休 45 秒',
+      '平板支撑 3 组 × 30-45 秒，组间休 45 秒',
+      '登山跑 3 组 × 20 秒，组间休 60 秒',
+      '有氧：快走 20 分钟'
+    ]},
+    { d:'周六', t:'全身循环（总时长约 40 分钟）', items:[
+      '以下循环做 3 轮，动作间休 15 秒，轮间休 2 分钟：',
+      '深蹲 × 15 次 → 俯卧撑 × 12 次（退阶：跪姿）→ 哑铃划船 × 12 次/侧 → 开合跳 30 秒'
+    ]},
+    { d:'周日', t:'完全休息', items:[
+      '不安排训练；补水 3000ml、睡够 8 小时，复盘本周完成度'
+    ]}
+  ], updatedAt: Date.now() - 86400000, source:'ai', basedOn:{ height:175, weight:73.5, fat:18.8 }, equip: eq };
+}
+/* 兼容旧格式（只有 d/t 的一行式计划） */
+function normalizePlanDays(days){
+  return (days || []).map(function(d){
+    var items = Array.isArray(d.items) ? d.items.slice() : (d.t ? [d.t] : []);
+    return { d:d.d, t:d.t || '训练日', items:items };
+  });
+}
+function renderPlan(){
+  var box = $('#planBody'); if(!box) return;
+  var p = S.plan;
+  var days = (p && p.days) ? normalizePlanDays(p.days) : [];
+  var more = $('#planMore');
+  var genBtn = $('#planGenBtn');
+  if(more) more.textContent = days.length
+    ? ((p.source === 'ai' ? '🤖 AI 生成' : '✍️ 手动') + ' · ' + (p.updatedAt ? dstr(new Date(p.updatedAt)) : ''))
+    : '';
+  if(genBtn) genBtn.textContent = days.length ? '🔄 重新生成' : '🤖 AI 生成';
+  if(!days.length){
+    box.innerHTML = '<div style="font-size:12.5px;color:var(--sub2);line-height:1.8">还没有训练计划。<br>点「AI 生成」——先告诉你手头有什么器械，小薄再按你的身体数据出一份<b style="color:var(--txt)">写到组数×次数、组间休息秒数</b>的一周计划，生成后即固定。也可以直接「编辑」手写。</div>';
+    return;
+  }
+  var td = WEEKDAYS[todayIdx()];
+  var base = p.basedOn
+    ? ('📌 基于 ' + fmtNum(p.basedOn.height, 0) + 'cm / ' + fmtNum(p.basedOn.weight) + 'kg / 体脂 ' + fmtNum(p.basedOn.fat) + '%（BMI ' + fmtNum(bmiOf(p.basedOn.height, p.basedOn.weight)) + '）' + (p.source === 'ai' ? '由 AI 生成' : '手动维护'))
+    : '';
+  var eq = p.equip || S.user.equipment;
+  var eqLine = eq ? ('🔧 器械 / 条件：' + esc(eq)) : '';
+  var openDay = S.planOpen || null;
+  box.innerHTML = (base ? '<div style="font-size:11px;color:var(--sub2);margin-bottom:4px">' + base + '</div>' : '') +
+    (eqLine ? '<div style="font-size:11px;color:var(--sub2);margin-bottom:8px">' + eqLine + '</div>' : '') +
+    '<div style="font-size:10.5px;color:var(--sub2);margin-bottom:4px">点某一天展开 / 收起当天动作（默认只显示概要）</div>' +
+    days.map(function(d, i){
+      var isToday = d.d === td;
+      var isOpen = openDay === d.d;
+      var headCol = isToday ? 'var(--acc)' : 'var(--sub)';
+      return '<div style="padding:9px 0;' + (i < days.length - 1 ? 'border-bottom:1px solid var(--line);' : '') + '">' +
+        '<div onclick="togglePlanDay(\'' + d.d + '\')" style="display:flex;gap:8px;align-items:center;cursor:pointer">' +
+        '<span style="flex:none;width:34px;font-size:12px;font-weight:800;color:' + headCol + '">' + d.d + '</span>' +
+        '<span style="flex:1;font-size:13px;font-weight:700;color:' + (isToday ? 'var(--txt)' : 'var(--sub)') + '">' + esc(d.t) + '</span>' +
+        '<span style="flex:none;font-size:10px;color:var(--sub2)">' + d.items.length + ' 个动作</span>' +
+        '<span style="flex:none;font-size:10px;color:var(--sub2);width:12px;text-align:center">' + (isOpen ? '▾' : '▸') + '</span>' +
+        (isToday ? '<span style="flex:none;font-size:10px;font-weight:700;color:var(--acc)">今天</span>' : '') +
+        '</div>' +
+        (isOpen ? '<div style="margin-left:34px;margin-top:7px">' + d.items.map(function(it){
+          return '<div style="font-size:12px;line-height:1.75;color:var(--sub);display:flex;gap:6px"><span style="color:var(--line2);flex:none">·</span><span>' + esc(it) + '</span></div>';
+        }).join('') + '</div>' : '') +
+        '</div>';
+    }).join('');
+}
+/* 编辑格式：`周一|标题` 开新一天，后续每行一个动作 */
+function parsePlanText(text){
+  var days = [], cur = null;
+  String(text || '').split('\n').forEach(function(l){
+    l = l.trim(); if(!l) return;
+    var m = l.match(/^(周[一二三四五六日]|星期[一二三四五六日])\s*[|:：]\s*(.*)$/);
+    if(m){
+      cur = { d: m[1].replace('星期', '周'), t: (m[2] || '训练日').slice(0, 40), items: [] };
+      days.push(cur);
+    } else if(cur){
+      cur.items.push(l.slice(0, 80));
+    } else {
+      cur = { d: WEEKDAYS[days.length] || '其他', t: l.slice(0, 40), items: [] };
+      days.push(cur);
+    }
+  });
+  days.forEach(function(d){ if(!d.items.length && d.t) d.items = [d.t]; });
+  return days;
+}
+function togglePlanDay(d){
+  S.planOpen = (S.planOpen === d) ? null : d;
+  save(); renderPlan();
+}
+function openEditPlan(){
+  var p = S.plan;
+  var days = (p && p.days) ? normalizePlanDays(p.days) : [];
+  var text = days.length
+    ? days.map(function(d){
+        return d.d + '|' + d.t + '\n' + d.items.join('\n');
+      }).join('\n\n')
+    : WEEKDAYS.map(function(d){ return d + '|'; }).join('\n\n');
+  openModal('<h3>🗓️ 一周训练计划</h3><div class="mSub">「周一|标题」开新一天，下面每行写一个动作（组数×次数、组间休息都要写）。空行会被忽略，保存后即固定。</div>' +
+    '<textarea id="planText" rows="11">' + esc(text) + '</textarea>' +
+    '<div class="mBtns"><button class="ghost" onclick="closeModal()">取消</button>' +
+    '<button class="primary" onclick="savePlan()">保存并固定</button></div>');
+}
+function savePlan(){
+  var days = parsePlanText($('#planText').value);
+  if(!days.length){ toast('至少写一天'); return; }
+  var b = latestBody();
+  S.plan = {
+    days: days, updatedAt: Date.now(), source: 'user',
+    basedOn: b ? { height:b.height, weight:b.weight, fat:b.fat } : (S.plan && S.plan.basedOn) || null,
+    equip: S.user.equipment || (S.plan && S.plan.equip) || ''
+  };
+  save(); renderDash(); closeModal();
+  toast('🗓️ 训练计划已固定');
+}
+/* ---- 器械条件 ---- */
+function openEquipModal(onDone){
+  openModal('<h3>🔧 我的器械 / 条件</h3><div class="mSub">小薄只推荐你手头能做的——没有搏击条件就写「无搏击条件」，它绝不会给你排搏击。</div>' +
+    '<textarea id="equipText" rows="3" placeholder="如：哑铃一对（5-20kg）、卧推凳、瑜伽垫、小区单杠；无搏击条件；无健身房">' + esc(S.user.equipment || '') + '</textarea>' +
+    '<div class="mBtns"><button class="ghost" onclick="closeModal()">取消</button>' +
+    '<button class="primary" onclick="saveEquip()">保存</button></div>');
+  window._equipCb = onDone || null;
+}
+function saveEquip(){
+  S.user.equipment = ($('#equipText').value || '').trim().slice(0, 120);
+  save();
+  var cb = window._equipCb; window._equipCb = null;
+  closeModal();
+  if(cb) cb();
+  else { renderDash(); toast('🔧 器械条件已保存'); }
+}
+function askEquipThenGenerate(){ openEquipModal(function(){ doGeneratePlan(); }); }
+/* ---- AI 生成 ---- */
+var planGen = { timer:null, t0:0, chars:0, abort:null };
+function planGenCancel(){
+  if(planGen.abort) planGen.abort.abort();
+}
+/* 从模型回复里提取 JSON 对象（容忍 ```json 代码块和前后废话） */
+function extractJsonObj(txt, key){
+  var t = String(txt || '').replace(/```json|```/g, '');
+  var s = t.indexOf('{'), e = t.lastIndexOf('}');
+  if(s >= 0 && e > s){
+    try{
+      var obj = JSON.parse(t.slice(s, e + 1));
+      if(obj && Array.isArray(obj[key]) && obj[key].length) return obj;
+    }catch(err){}
+  }
+  return null;
+}
+/* 兜底：模型不守 JSON 格式时，从散文/markdown 里解析计划 */
+function parsePlanFromProse(txt){
+  var days = [], cur = null;
+  String(txt || '').split('\n').forEach(function(l){
+    var raw = l.trim(); if(!raw) return;
+    var m = raw.match(/^\**\s*(周[一二三四五六日]|星期[一二三四五六日])\s*[|:：]?\s*\**\s*(.*)$/);
+    if(m){
+      cur = { d:m[1].replace('星期','周'), t:(m[2] || '训练日').replace(/\*/g,'').slice(0, 50), items:[] };
+      days.push(cur);
+      return;
+    }
+    var it = raw.replace(/^[-·•*\d.、\s]+/, '').replace(/\*/g, '').trim();
+    if(it && cur) cur.items.push(it.slice(0, 90));
+  });
+  days.forEach(function(d){ if(!d.items.length && d.t) d.items = [d.t]; });
+  return days.length ? days : null;
+}
+function doGeneratePlan(){
+  if(!S.settings.apiKey){ toast('AI 生成需要先接入 API（我的 → API 接入）'); return; }
+  var b = latestBody();
+  if(!b){ toast('先在「健康」页记录一次身体快照（身高/体重/体脂）'); return; }
+  var btn = $('#planGenBtn');
+  var oldTxt = btn ? btn.textContent : '';
+  if(btn) btn.textContent = '⏳ 生成中…';
+  var bmi = bmiOf(b.height, b.weight);
+  var eq = S.user.equipment || '未说明（按自重/哑铃保守安排）';
+  var basePrompt =
+    '用户身体数据：身高 ' + b.height + 'cm，体重 ' + b.weight + 'kg，体脂率 ' + (b.fat || '未知') + '%，BMI ' + bmi.toFixed(1) + '（' + bmiLabel(bmi) + '）。' +
+    '可用器械 / 条件：' + eq + '。' +
+    '目标：薄肌（低体脂 + 适量肌肉线条）。理论体系：搏击是动态神经资产，若条件允许每周安排 1-2 次对抗训练；若器械条件里没有搏击条件，就坚决不安排搏击，用其他项目替代；大睡理论：保证恢复，熬夜会废掉训练成果。\n' +
+    '请生成一周 7 天训练计划，硬性要求：\n' +
+    '1. 只允许使用上面列出的器械/条件，没有的绝对不能出现；\n' +
+    '2. 每个动作必须写清：组数 × 次数（或秒数）、组间休息多少秒、重量/难度选择建议；\n' +
+    '3. 每天必须包含热身和拉伸，并标注这天总时长；\n' +
+    '4. 零基础也看得懂：动作名+怎么做+退阶选项（做不了标准版时降级为什么）；\n' +
+    '5. 劳逸结合，至少 1 个恢复日/休息日。';
+  /* ---- 流式进度 UI ---- */
+  planGen.abort = new AbortController();
+  planGen.t0 = Date.now(); planGen.chars = 0;
+  var pbox = $('#planBody');
+  if(pbox){
+    pbox.innerHTML =
+      '<div style="display:flex;align-items:center;gap:9px"><span style="font-size:13px;font-weight:700;color:var(--cyan)">⏳ 小薄正在生成计划…</span>' +
+      '<button class="miniBtn ghost" style="font-size:11px;padding:5px 11px" onclick="planGenCancel()">取消</button></div>' +
+      '<div id="planGenMeta" style="font-size:11px;color:var(--sub2);margin-top:7px">已等待 0s</div>' +
+      '<div id="planGenPreview" style="font-size:11px;color:var(--sub2);margin-top:8px;padding:9px 11px;background:var(--bg2);border-radius:10px;max-height:120px;overflow:hidden;line-height:1.6;white-space:pre-wrap;word-break:break-all"></div>';
+  }
+  clearInterval(planGen.timer);
+  planGen.timer = setInterval(function(){
+    var s2 = Math.round((Date.now() - planGen.t0) / 1000);
+    var m = $('#planGenMeta');
+    if(m) m.textContent = '已等待 ' + s2 + 's · 已接收 ' + planGen.chars + ' 字' + (s2 >= 45 ? ' · 推理模型思考中，没卡住，可取消' : '');
+  }, 1000);
+  var useEffort = true;
+  function promptFor(n){
+    return basePrompt +
+      '\n只输出 JSON：{"days":[{"d":"周一","t":"主题（总时长约X分钟）","items":["热身：…","动作 4组×12次，组间休90秒，重量建议…，退阶：…", ...]}, ... 共 7 天]}' +
+      (n > 0 ? '\n\n【再次强调】你的上一次回复无法被解析。这次只输出一个 JSON 对象，不要 markdown 代码块、不要任何解释文字、不要省略任何一天。' : '');
+  }
+  function attempt(n){
+    var body = { model: S.settings.model, messages:[{ role:'user', content: promptFor(n) }], stream: true, temperature: 0.3 };
+    if(useEffort) body.reasoning_effort = 'low';   /* 结构化任务用低思考强度，大幅缩短等待 */
+    return fetch((S.settings.apiBase || 'https://api.stepfun.com/v1').replace(/\/+$/,'') + '/chat/completions', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + S.settings.apiKey },
+      body: JSON.stringify(body),
+      signal: planGen.abort.signal
+    }).then(function(res){
+      if(!res.ok) return res.text().then(function(t){
+        var e = new Error('HTTP ' + res.status); e.status = res.status; e.body = t;
+        if(res.status === 400 && useEffort && /reasoning_effort/i.test(t)){
+          useEffort = false;
+          var r = new Error('reasoning_effort 不支持，已自动去掉该参数重试'); r.__retryParam = true; throw r;
+        }
+        throw e;
+      });
+      return streamGenerate(res, function(t, kind){
+        planGen.chars += t.length;
+        var p = $('#planGenPreview');
+        if(p) p.textContent = (kind === 'reason' ? '💭 ' : '') + t.slice(-280);
+      });
+    }).then(function(r){
+      var txt = r.content || '';
+      var obj = extractJsonObj(txt, 'days');
+      var rawDays = obj ? obj.days : parsePlanFromProse(txt);
+      var days = (rawDays || []).map(function(x, i){
+        var items = Array.isArray(x.items) ? x.items.map(function(it){ return String(it).slice(0, 90); }) : [];
+        if(!items.length && x.t) items = [String(x.t).slice(0, 90)];
+        return { d: String(x.d || WEEKDAYS[i] || '').slice(0, 4), t: String(x.t || '训练日').slice(0, 50), items: items };
+      }).filter(function(x){ return x.d && x.items.length; });
+      if(!days.length){
+        if(n < 1) return attempt(n + 1);
+        var e = new Error('无法解析计划'); e.raw = (txt || r.reasoning || '').slice(0, 60); throw e;
+      }
+      return days;
+    }).catch(function(e){
+      if(e && e.name === 'AbortError'){ var c = new Error('__CANCELLED__'); throw c; }
+      if(e && e.__retryParam) return attempt(n);
+      if(n < 1 && !e.__retried){ e.__retried = true; return attempt(n + 1); }
+      e.__retried = true; throw e;
+    });
+  }
+  attempt(0).then(function(days){
+    S.plan = { days: days, updatedAt: Date.now(), source: 'ai', basedOn: { height:b.height, weight:b.weight, fat:b.fat }, equip: S.user.equipment };
+    S.planOpen = null;
+    save(); renderDash();
+    toast('🤖 已生成并固定一周训练计划');
+  }).catch(function(e){
+    if(e.message === '__CANCELLED__'){ toast('已取消生成'); renderDash(); return; }
+    toast('⚠️ 生成失败：' + e.message + (e.raw ? '（模型返回：' + e.raw + '…）' : ''));
+    renderDash();
+  }).finally(function(){
+    clearInterval(planGen.timer);
+    if(btn) btn.textContent = oldTxt;
+  });
+}
+
+
+function renderDash(){
+  var d = getDay();
+  var now = new Date();
+  var wk = ['日','一','二','三','四','五','六'][now.getDay()];
+  $('#dashDate').innerHTML = dstr(now).slice(5) + '<span>周' + wk + ' · 碳基服务器运行中</span>';
+
+  var train = (d.fight||0) + (d.gym||0);
+  var rings = [
+    { label:'饮水', val:d.water, unit:'/3000ml', col:'#22D3EE', max:TARGETS.water },
+    { label:'睡眠', val:d.sleep, unit:'/8h', col:'#A78BFA', max:TARGETS.sleep },
+    { label:'训练', val:train, unit:'/60min', col:'#A6FF3F', max:TARGETS.train },
+    { label:'创造', val:d.create, unit:'/1次', col:'#FB923C', max:TARGETS.create }
+  ];
+  $('#ringsRow').innerHTML = rings.map(function(r){
+    var C = 188.5, p = clamp(r.val / r.max, 0, 1);
+    return '<div class="ringItem"><svg viewBox="0 0 72 72">' +
+      '<circle class="ringBg" cx="36" cy="36" r="30"/>' +
+      '<circle class="ringFg" cx="36" cy="36" r="30" stroke="' + r.col + '" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C*(1-p)).toFixed(1) + '"/>' +
+      '<text x="36" y="35" class="ringVal">' + (r.val % 1 === 0 ? r.val : r.val.toFixed(1)) + '</text>' +
+      '<text x="36" y="47" class="ringUnit">' + r.unit + '</text>' +
+      '</svg><div class="ringLabel">' + r.label + '</div></div>';
+  }).join('');
+
+  var adv = [];
+  if(S.plan && S.plan.days && S.plan.days.length){
+    var tdName = WEEKDAYS[todayIdx()];
+    var tp = null;
+    S.plan.days.forEach(function(x){ if(x.d === tdName) tp = x; });
+    if(tp) adv.push(['🗓️','今日训练计划：<b>' + esc(tp.t) + '</b>（已固定，上方可编辑）']);
+  }
+  if(d.water < TARGETS.water*0.5) adv.push(['💧','饮水落后：现在补 <b>' + (TARGETS.water - d.water) + 'ml</b>，分 3 次喝，别等口渴。']);
+  else if(d.water < TARGETS.water) adv.push(['💧','饮水差 <b>' + (TARGETS.water - d.water) + 'ml</b> 达标，下午来两杯。']);
+  else adv.push(['💧','饮水达标 ✔ 代谢地基稳固，保持。']);
+  if(d.sleep < 7) adv.push(['🌙','睡眠赤字 ' + (TARGETS.sleep - d.sleep).toFixed(1) + 'h：今晚 <b>23:00 前上床</b>，否则训练成果打折。']);
+  else if(d.sleep >= 8) adv.push(['🌙','睡眠满分 ✔ 肌肉修复窗口全开。']);
+  else adv.push(['🌙','睡眠 ' + d.sleep + 'h 及格，冲 8h 就是白捡的增肌。']);
+  if(train === 0) adv.push(['🏋️','今日未训练：<b>30 分钟薄肌</b> 或 <b>20 分钟搏击</b>，二选一即可。']);
+  else adv.push(['🥊','已训练 ' + train + 'min ✔' + (d.fight ? '（含搏击，神经资产 +1）' : '，缺一块动态神经资产——搏击安排上了吗？')]);
+  if(d.create === 0) adv.push(['✍️','今日无创造产出：写 <b>300 字</b>或改一版产品，少消费多创造。']);
+  else adv.push(['✍️','创造 ' + d.create + ' 次 ✔ 长期价值持续复利。']);
+  $('#adviceList').innerHTML = adv.map(function(a){
+    return '<div class="adviceItem"><div class="aIcon">' + a[0] + '</div><div>' + a[1] + '</div></div>';
+  }).join('');
+
+  var debt = Math.max(0, TARGETS.sleep - d.sleep);
+  var load = clamp(Math.round(28 + debt*14 + Math.max(0, TARGETS.water - d.water)/45), 5, 99);
+  var st = load < 45 ? ['流畅','ok'] : load < 70 ? ['中等负载','warn'] : ['过载','bad'];
+  var tip = load < 45 ? '各项指标在线，可以上强度，也可以上难度——决策、训练都行。'
+    : load < 70 ? '先补水、补觉，把负载降下来再碰重大决策。'
+    : '碳基服务器过热：停止熬夜，今晚只做一件事——23 点前睡觉。';
+  $('#serverLoad').textContent = load + '%';
+  var pill = $('#serverPill'); pill.textContent = st[0]; pill.className = 'pill ' + st[1];
+  $('#serverTip').textContent = tip;
+  $('#serverBot').innerHTML = robotSVG();
+
+  var days = [];
+  for(var i=6;i>=0;i--){ var dt = new Date(); dt.setDate(dt.getDate()-i);
+    days.push({ k:dstr(dt), e:S.data[dstr(dt)] }); }
+  $('#weekChart').innerHTML = days.map(function(x, idx){
+    var h = x.e ? x.e.sleep||0 : 0;
+    var hh = clamp(h/9*100, 3, 100);
+    return '<div class="wBar' + (idx===6?' today':'') + '"><div class="wVal">' + (h?h.toFixed(1):'-') + '</div>' +
+      '<div class="wFill" style="height:' + hh + '%"></div><div class="wLab">' + x.k.slice(8) + '</div></div>';
+  }).join('');
+
+  var logs = [
+    ['💧','喝水 +250ml','白开水', function(){ getDay().water += 250; }],
+    ['😴','睡眠 8h','理想修复', function(){ getDay().sleep = 8; }],
+    ['🥊','搏击 30min','神经资产', function(){ getDay().fight += 30; }],
+    ['🏋️','薄肌 45min','静态资产', function(){ getDay().gym += 45; }],
+    ['✍️','创造 +1','少消费多创造', function(){ getDay().create += 1; }],
+    ['🥤','含糖饮料 +1','税！扣 200ml', function(){ getDay().water = Math.max(0, getDay().water - 200); }]
+  ];
+  $('#quickLogs').innerHTML = logs.map(function(l, i){
+    return '<button class="qlBtn" onclick="quickLog(' + i + ')"><span style="font-size:19px">' + l[0] + '</span>' + l[1] + '<small>' + l[2] + '</small></button>';
+  }).join('');
+  window._logs = logs;
+  renderPlan();
+}
+function quickLog(i){
+  window._logs[i][3]();
+  save(); renderDash(); renderHeader();
+  toast('✅ 已写入今日数据');
+}
+
+/* ---------------- 我的 ---------------- */
+function renderMe(){
+  var days = Math.max(1, Math.round((Date.now() - new Date(S.user.since).getTime()) / 86400000));
+  tickLife();
+  $('#meBot').innerHTML = robotSVG();
+  $('#meName').textContent = S.user.name + ' 的掌舵Agent';
+  $('#meSub').innerHTML = '已共同运行 <b>' + days + '</b> 天 · 记忆 ' + S.memories.length + ' 条<br>' +
+    (S.user.birthday ? '🎂 ' + S.user.birthday : '🎂 未设置') + ' · ' + (S.user.gender || '性别未填') + ' · 预期 ' + (S.user.lifespan || 80) + ' 岁';
+  $('#meModelVal').textContent = S.settings.model;
+  $('#meBotNameVal').textContent = botName();
+  $('#aboutBotName').textContent = botName();
+  $('#tgAutoMem').classList.toggle('on', S.settings.autoMem);
+  var tgWs = $('#tgWebSearch'); if(tgWs) tgWs.classList.toggle('on', S.settings.webSearch !== false);
+      $('#theoryList').innerHTML = THEORIES.map(function(th){
+    return '<details class="theory"><summary>' + th.t + '<span class="tTag">' + th.tag + '</span><span class="tArrow">▶</span></summary><div class="tBody">' + th.d + '</div></details>';
+  }).join('');
+  $('#apiBase').value = S.settings.apiBase || '';
+  $('#apiKey').value = S.settings.apiKey || '';
+  }
+function toggleSet(k){
+  if(k === 'webSearch'){
+    S.settings.webSearch = (S.settings.webSearch === false);
+    save(); renderMe();
+    toast(S.settings.webSearch ? '🔍 联网搜索已开启：时效性问题会自动先搜索' : '联网搜索已关闭');
+    return;
+  }
+  S.settings.autoMem = !S.settings.autoMem; save(); renderMe(); renderHeader();
+  toast(S.settings.autoMem ? '📝 自动记忆提取已开启：聊天中值得记住的事会自动入库' : '自动记忆提取已关闭');
+}
+function saveApi(){
+  S.settings.apiBase = ($('#apiBase').value || '').trim() || 'https://api.stepfun.com/v1';
+  S.settings.apiKey = ($('#apiKey').value || '').trim();
+  save(); renderHeader();
+  if(S.settings.apiKey) fetchModels(true).then(function(){ renderMe(); });
+  toast(S.settings.apiKey ? '⚡ 已接入 StepCode，所有问题将由 ' + S.settings.model + ' 实时回答' : 'Key 已清空，暂时回到剧本引擎');
+}
+function exportData(){
+  var blob = new Blob([JSON.stringify(S, null, 2)], { type:'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'boji-plan-data.json'; a.click();
+  toast('📤 已导出 JSON');
+}
+function confirmReset(){
+  openModal('<h3>重置所有数据？</h3><div class="mSub">记忆、打卡、聊天记录都会清空，且不可恢复。</div>' +
+    '<div class="mBtns"><button class="ghost" onclick="closeModal()">取消</button>' +
+    '<button class="primary" style="background:linear-gradient(135deg,#FF7B7B,#E63838);color:#fff" onclick="doReset()">确认重置</button></div>');
+}
+function doReset(){
+  localStorage.removeItem(LS_KEY);
+  S = seed(); save(); closeModal();
+  renderAll(); toast('已重置');
+}
+
+/* ---------------- 模型弹层 ---------------- */
+function paintModelSheet(loading){
+  var list = modelList();
+  var live = !!(S.models && S.models.length);
+  $('#sheetTitle').textContent = '选择机器人模型' + (live ? '（' + list.length + ' 个 · 来自开放平台）' : '（内置列表）');
+  $('#sheetBody').innerHTML = (loading ? '<div style="font-size:12.5px;color:var(--sub2);padding:6px 2px 12px">⏳ 正在从 api.stepfun.com/v1/models 拉取…</div>' : '') +
+    list.map(function(m){
+      return '<div class="modelRow ' + (S.settings.model===m.id?'sel':'') + '" onclick="setModel(\'' + m.id + '\')">' +
+        '<div class="radio"></div><div><div class="mName">' + m.n + '</div><div class="mDesc">' + (m.d || '') + '</div></div></div>';
+    }).join('') +
+    '<div style="display:flex;gap:8px;margin-top:12px"><button class="miniBtn ghost" onclick="refreshModels()">🔄 刷新模型列表</button></div>' +
+    '<div style="font-size:11px;color:var(--sub2);line-height:1.7;padding:10px 2px 0">💡 列表实时来自 StepFun 开放平台 <b>api.stepfun.com/v1/models</b>（需已填入 API Key）。' +
+    (S.modelsAt ? '更新于 ' + dstr(new Date(S.modelsAt)) : '当前为内置兜底列表。') + '</div>';
+}
+function openModelSheet(){
+  paintModelSheet(false);
+  $('#sheetMask').classList.add('show'); $('#sheet').classList.add('show');
+  var stale = !S.modelsAt || (Date.now() - S.modelsAt > 6*3600*1000);
+  if(S.settings.apiKey && stale) refreshModels();
+}
+function refreshModels(){
+  paintModelSheet(true);
+  fetchModels(false).then(function(ok){ if(ok){ paintModelSheet(false); toast('✅ 模型列表已更新'); } else paintModelSheet(false); });
+}
+function setModel(id){
+  S.settings.model = id; save(); closeSheet();
+  renderHeader(); renderMe(); toast('🤖 已切换模型：' + id);
+}
+function closeSheet(){ $('#sheetMask').classList.remove('show'); $('#sheet').classList.remove('show'); }
+
+/* ---------------- 模态 ---------------- */
+function openModal(html){ $('#modal').innerHTML = html; $('#modalMask').classList.add('show'); }
+function closeModal(){ $('#modalMask').classList.remove('show'); }
+function openAddMem(){
+  openModal('<h3>➕ 添加长期记忆</h3><div class="mSub">关于你的目标、习惯、偏好、关系——' + botName() + '会在决策时自动引用。</div>' +
+    '<textarea id="nmText" rows="3" placeholder="例如：我对乳糖不耐，蛋白粉选分离乳清"></textarea>' +
+    '<select id="nmCat">' + Object.keys(MEM_CATS).map(function(c){ return '<option>' + c + '</option>'; }).join('') + '</select>' +
+    '<select id="nmImp"><option value="1">重要度 ★</option><option value="2" selected>重要度 ★★</option><option value="3">重要度 ★★★</option></select>' +
+    '<div class="mBtns"><button class="ghost" onclick="closeModal()">取消</button>' +
+    '<button class="primary" onclick="saveNewMem()">写入记忆</button></div>');
+}
+function saveNewMem(){
+  var t = $('#nmText').value.trim();
+  if(!t){ toast('先写点内容'); return; }
+  addMemory({ cat:$('#nmCat').value, text:t, src:'user', imp:parseInt($('#nmImp').value) }, true);
+  closeModal(); toast('📚 已写入长期记忆');
+}
+
+/* ---------------- 新手引导 ---------------- */
+var obStep = 0, obName = '', obGoal = '';
+function startOnboarding(){
+  obStep = 0; obName = S.user.name === '阿晨' ? '' : S.user.name; obGoal = '';
+  showObStep();
+}
+function showObStep(){
+  var dots = '<div class="dots">' + [0,1,2].map(function(i){ return '<i class="' + (i<=obStep?'on':'') + '"></i>'; }).join('') + '</div>';
+  if(obStep === 0){
+    openModal(dots + '<h3>你好，我是' + botName() + ' 🦾</h3><div class="mSub">你的 AI 掌舵 Agent。先让我记住你的名字——之后的每次对话、决策、打卡，我都会带着这个认知服务你。</div>' +
+      '<input type="text" id="obName" placeholder="怎么称呼你？" value="' + esc(obName) + '">' +
+      '<div class="mBtns"><button class="ghost" onclick="skipOb()">跳过</button><button class="primary" onclick="obNext()">下一步</button></div>');
+    setTimeout(function(){ $('#obName').focus(); }, 100);
+  } else if(obStep === 1){
+    openModal(dots + '<h3>你的主战场是？</h3><div class="mSub">决定我每天盯你的侧重点。可以之后在「我的」里改。</div>' +
+      '<div class="goalGrid">' +
+      ['全套掌舵','薄肌体型','搏击心态','财富决策'].map(function(g){
+        return '<button class="goalOpt ' + (obGoal===g?'sel':'') + '" onclick="obPick(\'' + g + '\')">' + g + '</button>';
+      }).join('') + '</div>' +
+      '<div class="mBtns"><button class="ghost" onclick="obStep=0;showObStep()">上一步</button><button class="primary" onclick="obNext()">下一步</button></div>');
+  } else {
+    openModal(dots + '<h3>记忆模块已挂载 🧠</h3>' +
+      '<div class="mSub">我会自动从对话里提取关于你的长期信息（目标、习惯、决定），也可以在「记忆」页手动管理。<br><br>理论底座：搏击 × 大水 × 大睡 × 先开图再出兵 × 先自由后财富 × 少消费多创造。</div>' +
+      '<div class="mBtns"><button class="ghost" onclick="obStep=1;showObStep()">上一步</button><button class="primary" onclick="finishOb()">开始掌舵 →</button></div>');
+  }
+}
+function obPick(g){ obGoal = g; showObStep(); }
+function obNext(){
+  if(obStep === 0){
+    obName = ($('#obName').value || '').trim();
+    if(!obName){ toast('先告诉我你的名字'); return; }
+  }
+  obStep++; showObStep();
+}
+function skipOb(){ S.onboarded = true; save(); closeModal(); toast('已跳过，可在「我的」重新引导'); }
+function finishOb(){
+  S.user.name = obName || S.user.name;
+  S.user.goal = obGoal || '全套掌舵';
+  S.user.since = dstr();
+  S.onboarded = true;
+  if(obGoal){
+    var gtxt = '主战场：' + obGoal + '（2025 年设定，' + botName() + '会按这个侧重点每日盯盘）';
+    if(!S.memories.some(function(m){ return m.text === gtxt; }))
+      S.memories.unshift({ id:uid(), cat:'目标', text:gtxt, src:'ai', imp:3, date:dstr() });
+  }
+  S.chat.push({ who:'bot', t:Date.now(),
+    html:'认识了，' + S.user.name + '。✅ 我是' + botName() + '，模型 <b>' + S.settings.model + '</b>，长期记忆已挂载。<br><br>' +
+      '从今天起：饮水、睡眠、搏击、薄肌、创造，我每天帮你盯；遇到大事，走「先开图，再出兵」。<br><br>' +
+      '第一件事——昨晚睡了几小时？', });
+  save(); renderAll(); closeModal();
+  renderChat(); switchTab('chat');
+  toast('🎉 ' + botName() + '已就位');
+}
+
+/* ---------------- 渲染 ---------------- */
+function renderHeader(){
+  $('#hBot').innerHTML = robotSVG();
+  $('#hBotName').textContent = botName();
+  $('#msgInput').placeholder = '跟' + botName() + '说点什么…（打卡 / 记住我）';
+  $('#modelChipTxt').textContent = S.settings.model;
+  var d = getDay();
+  var left = [];
+  if(d.water < TARGETS.water) left.push('差' + (TARGETS.water - d.water) + 'ml水');
+  if(d.sleep < 7) left.push('睡眠赤字');
+  if((d.fight + d.gym) === 0) left.push('未训练');
+  $('#hStatusTxt').textContent = (S.settings.apiKey ? 'API 实时' : '待接入 API') + ' · 记忆 ' + S.memories.length + ' 条' + (left.length ? ' · ' + left[0] : ' · 指标全绿');
+}
+function renderChat(){
+  /* 注意：必须拼 HTML 字符串；不能 map 出 DOM 元素再 join（会被字符串化成 [object HTMLDivElement]） */
+  $('#chatScroll').innerHTML = S.chat.map(function(m){
+    var t = m.t ? new Date(m.t) : new Date();
+    var ts = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+    return '<div class="msg ' + m.who + '">' +
+      (m.who === 'bot' ? '<div class="mAvatar">' + robotSVG() + '</div>' : '') +
+      '<div><div class="bubble">' + (m.who === 'bot' ? (m.html || '') : esc(m.text || '')) + '</div>' +
+      '<div class="mTime">' + ts + '</div></div></div>';
+  }).join('');
+  $('#chatScroll').scrollTop = $('#chatScroll').scrollHeight;
+  $('#quickRow').innerHTML = QUICKS.map(function(q){
+    return '<button class="quickC" onclick="sendText(\'' + q.replace(/^[^ ]+ /,'') + '\')">' + q + '</button>';
+  }).join('');
+}
+function renderAll(){ renderHeader(); renderChat(); renderDash(); renderMem(); renderAsset(); renderHealth(); renderBody(); renderMe(); }
+
+/* ---------------- 输入框行为 ---------------- */
+function bindInput(){
+  var inp = $('#msgInput');
+  inp.addEventListener('input', function(){ inp.style.height = 'auto'; inp.style.height = Math.min(100, inp.scrollHeight) + 'px'; });
+  inp.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); onSendClick(); }
+  });
+  $('#modalMask').addEventListener('click', function(e){ if(e.target === this) closeModal(); });
+}
+
+/* ---------------- 时钟 ---------------- */
+function clock(){
+  var n = new Date();
+  $('#sbTime').textContent = n.getHours() + ':' + String(n.getMinutes()).padStart(2,'0');
+}
+
+/* ---------------- 晨间简报 ---------------- */
+function morningBrief(){
+  var last = S.chat[S.chat.length - 1];
+  var lastDay = last && last.t ? dstr(new Date(last.t)) : '';
+  if(lastDay === dstr()) return;
+  var y = new Date(); y.setDate(y.getDate()-1);
+  var yd = S.data[dstr(y)] || { water:0, sleep:0, fight:0, gym:0, create:0 };
+  var todo = [];
+  if(yd.sleep < 7.5) todo.push('把睡眠拉到 8h，今晚 23:00 上床');
+  if(yd.water < 3000) todo.push('饮水补到 3000ml');
+  if((yd.fight + yd.gym) < 60) todo.push('安排 60 分钟训练（搏击 + 薄肌）');
+  if(!yd.create) todo.push('完成一次创造输出');
+  if(!todo.length) todo.push('指标全绿，今天可以上一个难度');
+  S.chat.push({ who:'bot', t:Date.now(),
+    html:'☀️ <b>晨间掌舵简报</b>（AI 自动生成）<br><br>' +
+      '昨日数据：睡眠 ' + yd.sleep + 'h · 饮水 ' + yd.water + 'ml · 训练 ' + (yd.fight + yd.gym) + 'min · 创造 ' + yd.create + ' 次<br><br>' +
+      '今日三件事：<br>1. ' + todo[0] + '<br>2. ' + (todo[1] || '保持节奏') + '<br>3. ' + (todo[2] || '自由活动，保持灵活') + '<br><br>' +
+      '有变化随时跟我说。' });
+  save();
+}
+
+/* ---------------- 启动 ---------------- */
+function init(){
+  S = load() || seed();
+  if(!S.settings) S.settings = seed().settings;
+  if(typeof S.settings.apiBase === 'undefined') S.settings.apiBase = 'https://api.stepfun.com/v1';
+  if(typeof S.settings.apiKey === 'undefined') S.settings.apiKey = '';
+      if(!S.snapshots) S.snapshots = seedSnapshots();
+  delete S.assets;
+  if(!S.health) S.health = seedHealth();
+  if(!S.diet) S.diet = seedDiet();
+  if(!S.memo) S.memo = seedMemo();
+  if(!S.body) S.body = seedBody();
+  if(typeof S.plan === 'undefined') S.plan = null;
+  if(S.plan && S.plan.days) S.plan.days = normalizePlanDays(S.plan.days);
+  if(typeof S.planOpen === 'undefined') S.planOpen = null;
+  delete S.settings.autoBody;
+  if(!S.user.lifespan) S.user.lifespan = 80;
+  if(typeof S.user.birthday === 'undefined') S.user.birthday = '';
+  if(typeof S.user.gender === 'undefined') S.user.gender = '';
+  if(typeof S.user.equipment === 'undefined') S.user.equipment = '';
+  delete S.settings.persona;
+  if(!S.settings.botName) S.settings.botName = '小薄';
+  if(!S.settings.model) S.settings.model = 'step-5-preview';
+  delete S.settings.backend;
+  delete S.settings.backendUrl;
+  delete S.settings.autoAsset;
+    if(!S.data) S.data = {};
+  if(!S.memories) S.memories = [];
+  if(!S.chat) S.chat = [];
+  getDay();
+  save();
+  bindInput();
+  clock(); setInterval(clock, 20000);
+  setInterval(tickLife, 1000);
+  morningBrief();
+  renderAll();
+  if(S.settings.apiKey) fetchModels(true);
+  if(!S.onboarded) startOnboarding();
+}
+
+/* ---- 安卓 App 适配 ---- */
+if(/BojiPlanApp/.test(navigator.userAgent)){
+  var sb = document.getElementById('statusbar'); if(sb) sb.style.display = 'none';
+  var gb = document.getElementById('gestureBar'); if(gb) gb.style.display = 'none';
+}
+/* 系统返回键钩子：App 壳先问页面（关弹窗/底部抽屉），再走 WebView 历史 */
+window.__bojiBack = function(){
+  if($('#modalMask').classList.contains('show')){ closeModal(); return true; }
+  if($('#sheetMask').classList.contains('show')){ closeSheet(); return true; }
+  return false;
+};
+init();
+</script>
+</body>
+</html>
