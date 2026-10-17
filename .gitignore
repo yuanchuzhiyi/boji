@@ -1,3 +1,14 @@
 node_modules
 dist
+dist-ssr
+.DS_Store
+*.local
+*.log
+.env
 .env.local
+.vite
+
+# 签名证书：dist/ 已忽略，这里忽略源码目录里的私钥，避免误提交
+capsule/signing/*.p12
+capsule/signing/*.jks
+capsule/signing/*.keystore

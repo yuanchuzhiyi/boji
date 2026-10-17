@@ -1,0 +1,11 @@
+{
+  "applicationId": "ai_p_0d6602b3ad82794d",
+  "name": "p_0d6602b3ad82794d",
+  "version": "0.1.0",
+  "versionCode": 1,
+  "entry": "web/index.html",
+  "description": "p_0d6602b3ad82794d",
+  "orientation": "portrait",
+  "fullscreen": false,
+  "permissions": []
+}
