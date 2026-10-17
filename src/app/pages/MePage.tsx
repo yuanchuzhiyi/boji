@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Cpu, Download, Sparkles, Trash2 } from 'lucide-react'
 
 import { BotFace } from '@/shared/ui/BotFace'
@@ -12,6 +12,7 @@ import { dstr, getState, mutate, resetState, uid, useBoji } from '@/app/store/bo
 import { ModelPickerDialog } from '@/app/components/ModelPickerDialog'
 import { probeConnection } from '@/app/lib/stepfun'
 import { esc } from '@/app/lib/text'
+import { useLifeCountdown } from '@/app/lib/useLifeCountdown'
 
 interface Theory {
   t: string
@@ -37,7 +38,7 @@ const THEORIES: Theory[] = [
 export function MePage() {
   const s = useBoji()
   const { toast } = useToast()
-  const [now, setNow] = useState(Date.now())
+  const life = useLifeCountdown()
   const [modelSheet, setModelSheet] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
@@ -53,20 +54,8 @@ export function MePage() {
   const [resetOpen, setResetOpen] = useState(false)
   const [onboardOpen, setOnboardOpen] = useState(false)
 
-  // 生命倒计时：秒级跳动
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000)
-    return () => window.clearInterval(timer)
-  }, [])
-
   const botName = s.settings.botName || '小薄'
   const sinceDays = Math.max(1, Math.round((Date.now() - new Date(s.user.since).getTime()) / 86400000))
-
-  /* ---------------- 生命倒计时 ---------------- */
-
-  const birthday = s.user.birthday ? new Date(`${s.user.birthday}T00:00:00`) : null
-  const end = birthday ? new Date(birthday.getFullYear() + (s.user.lifespan || 80), birthday.getMonth(), birthday.getDate()) : null
-  const remainMs = end ? end.getTime() - now : 0
 
   /* ---------------- 设置动作 ---------------- */
 
@@ -183,36 +172,32 @@ export function MePage() {
             设置
           </button>
         </div>
-        {end && remainMs > 0 ? (
+        {life.configured && !life.expired ? (
           <>
             <div className="flex items-baseline gap-1.5">
               <span className="text-display font-semibold text-primary" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {Math.floor(remainMs / 86400000).toLocaleString()}
+                {life.days.toLocaleString()}
               </span>
               <span className="text-caption font-medium text-muted-foreground">天</span>
               <span className="ms-2.5 text-title font-semibold text-info" style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '1px' }}>
-                {String(Math.floor(remainMs / 3600000) % 24).padStart(2, '0')}:{String(Math.floor(remainMs / 60000) % 60).padStart(2, '0')}:
-                {String(Math.floor(remainMs / 1000) % 60).padStart(2, '0')}
+                {String(life.hours).padStart(2, '0')}:{String(life.minutes).padStart(2, '0')}:{String(life.seconds).padStart(2, '0')}
               </span>
             </div>
             <p className="mt-1.5 text-caption text-muted-foreground">
-              距离 {s.user.lifespan || 80} 岁生日（{dstr(end)}）还有 {Math.floor(remainMs / 86400000).toLocaleString()} 天 · 每秒都在倒数
+              距离 {s.user.lifespan || 80} 岁生日（{life.endDate}）还有 {life.days.toLocaleString()} 天 · 每秒都在倒数
             </p>
             <div className="mt-3">
               <div className="mb-1 flex justify-between text-caption text-muted-foreground">
                 <span>人生进度</span>
-                <span>{(((now - (birthday?.getTime() ?? now)) / (end.getTime() - (birthday?.getTime() ?? now))) * 100).toFixed(1)}%</span>
+                <span>{life.percent.toFixed(1)}%</span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-sm bg-muted">
-                <div
-                  className="h-full rounded-sm bg-gradient-to-r from-primary to-info"
-                  style={{ width: `${Math.min(100, Math.max(0, ((now - (birthday?.getTime() ?? now)) / (end.getTime() - (birthday?.getTime() ?? now))) * 100)).toFixed(2)}%` }}
-                />
+                <div className="h-full rounded-sm bg-gradient-to-r from-primary to-info" style={{ width: `${life.percent.toFixed(2)}%` }} />
               </div>
-              <p className="mt-1 text-caption text-muted-foreground">已度过 {Math.floor((now - (birthday?.getTime() ?? now)) / 86400000).toLocaleString()} 天</p>
+              <p className="mt-1 text-caption text-muted-foreground">已度过 {life.livedDays.toLocaleString()} 天</p>
             </div>
           </>
-        ) : end && remainMs <= 0 ? (
+        ) : life.configured && life.expired ? (
           <div className="py-1 text-center">
             <p className="text-title font-semibold text-danger">已超过预期寿命</p>
             <p className="mt-1 text-caption text-muted-foreground">每一个多出来的日子都是赚的。点「设置」把预期寿命调高。</p>

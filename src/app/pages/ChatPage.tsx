@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Cpu, Send } from 'lucide-react'
+import { Cpu, Hourglass, Send } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 import { BotFace } from '@/shared/ui/BotFace'
 import { useToast } from '@/shared/ui/Toast'
@@ -8,6 +9,7 @@ import { ModelPickerDialog } from '@/app/components/ModelPickerDialog'
 import { askHelm, describeApiError } from '@/app/lib/stepfun'
 import { applyLog, detect, noKeyNotice, respond } from '@/app/lib/script'
 import { esc, fmt, fmtTime } from '@/app/lib/text'
+import { useLifeCountdown } from '@/app/lib/useLifeCountdown'
 
 /**
  * 对话页：机器人「小薄」的 AI 掌舵主界面。
@@ -19,6 +21,8 @@ import { esc, fmt, fmtTime } from '@/app/lib/text'
 export function ChatPage() {
   const s = useBoji()
   const { toast } = useToast()
+  const navigate = useNavigate()
+  const life = useLifeCountdown()
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [streaming, setStreaming] = useState<{ html: string; searching?: string } | null>(null)
@@ -136,6 +140,40 @@ export function ChatPage() {
           <span className="max-w-[92px] truncate">{s.settings.model}</span>
         </button>
       </header>
+
+      {/* 生命倒计时条：始终可见，秒级跳动；未设置生日时是引导入口 */}
+      {life.configured ? (
+        <div className="flex shrink-0 items-center gap-2 border-b border-border bg-primary-soft px-4 py-2">
+          <Hourglass className="size-4 shrink-0 text-primary" aria-hidden />
+          <span className="shrink-0 text-caption text-muted-foreground">生命倒计时</span>
+          {life.expired ? (
+            <span className="text-body font-semibold text-danger">已超过预期寿命 · 多活的都是赚的</span>
+          ) : (
+            <>
+              <span className="text-title font-semibold text-primary" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                还剩 {life.days.toLocaleString()} 天
+              </span>
+              <span
+                className="ms-auto shrink-0 text-body font-semibold text-info"
+                style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '1px' }}
+              >
+                {String(life.hours).padStart(2, '0')}:{String(life.minutes).padStart(2, '0')}:{String(life.seconds).padStart(2, '0')}
+              </span>
+            </>
+          )}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => navigate('/me')}
+          className="flex shrink-0 items-center gap-2 border-b border-border bg-primary-soft px-4 py-2.5 text-left"
+        >
+          <Hourglass className="size-4 shrink-0 text-primary" aria-hidden />
+          <span className="text-caption text-muted-foreground">
+            设置生日与预期寿命，开启<b className="text-primary">生命倒计时</b> →
+          </span>
+        </button>
+      )}
 
       {/* 消息列表 */}
       <div
