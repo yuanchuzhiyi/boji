@@ -1,11 +1,11 @@
 {
   "applicationId": "ai_p_0d6602b3ad82794d",
-  "name": "p_0d6602b3ad82794d",
+  "name": "薄肌计划 BojiPlan",
   "version": "0.1.0",
   "versionCode": 1,
   "entry": "web/index.html",
-  "description": "p_0d6602b3ad82794d",
+  "description": "碳基服务器，AI 掌舵：每日打卡、训练计划、体检解读、资产曲线与生命倒计时的个人 AI 掌舵 Agent",
   "orientation": "portrait",
   "fullscreen": false,
-  "permissions": []
+  "permissions": ["album", "camera"]
 }

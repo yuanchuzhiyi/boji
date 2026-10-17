@@ -177,6 +177,92 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
+  /* ---------- 薄肌计划：机器人 / 聊天 / 图表的动效 ---------- */
+  /* 指标环：进度变化时圆环平滑生长（只动 stroke-dashoffset，不触发布局） */
+  .ring-anim {
+    transition: stroke-dashoffset var(--duration-base) var(--ease-standard);
+  }
+
+  /* 机器人「思考中」：荧光绿光晕呼吸 */
+  .animate-bot-think {
+    animation: bot-think 1s ease-in-out infinite;
+  }
+
+  /* 机器人眼睛定期眨一下 */
+  .animate-bot-blink {
+    animation: bot-blink 4.2s infinite;
+    transform-origin: 32px 30px;
+  }
+
+  /* 对方正在输入的三个点 */
+  .animate-typing-dot {
+    animation: typing-dot 1s infinite;
+  }
+
+  /* 新消息 / 新卡片轻入场（淡入 + 8px 上移） */
+  .animate-msg-in {
+    animation: msg-in var(--duration-fast) var(--ease-standard);
+  }
+
+  /* 心跳线（健康页心电图）沿线扫过：用 transform 位移，不动布局 */
+  .animate-pulse-scan {
+    animation: pulse-scan 2.4s var(--ease-standard) infinite;
+  }
+}
+
+@keyframes bot-think {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 3px rgb(var(--primary) / 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgb(var(--primary) / 0.9));
+  }
+}
+
+@keyframes bot-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes typing-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pulse-scan {
+  0% {
+    transform: translateX(-100%);
+  }
+  60%,
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 @keyframes dialog-in {

@@ -36,6 +36,21 @@ export default {
           DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
           foreground: 'rgb(var(--accent-foreground) / <alpha-value>)',
         },
+        info: {
+          DEFAULT: 'rgb(var(--info) / <alpha-value>)',
+          foreground: 'rgb(var(--info-foreground) / <alpha-value>)',
+          soft: 'rgb(var(--info-soft) / <alpha-value>)',
+        },
+        violet: {
+          DEFAULT: 'rgb(var(--violet) / <alpha-value>)',
+          foreground: 'rgb(var(--violet-foreground) / <alpha-value>)',
+          soft: 'rgb(var(--violet-soft) / <alpha-value>)',
+        },
+        orange: {
+          DEFAULT: 'rgb(var(--orange) / <alpha-value>)',
+          foreground: 'rgb(var(--orange-foreground) / <alpha-value>)',
+          soft: 'rgb(var(--orange-soft) / <alpha-value>)',
+        },
         success: {
           DEFAULT: 'rgb(var(--success) / <alpha-value>)',
           foreground: 'rgb(var(--success-foreground) / <alpha-value>)',

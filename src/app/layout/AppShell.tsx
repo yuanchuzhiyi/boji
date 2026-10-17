@@ -1,16 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Brain, ChevronLeft, Gauge, HeartPulse, MessagesSquare, UserRound, Wallet } from 'lucide-react'
 
 import { cn } from '@/shared/lib/cn'
 import { PageTitleProvider } from './PageTitle'
 import { TopBleedScrim } from './TopBleedScrim'
 
 /** 一级（Tab）路由：不显示返回按钮。新增 Tab 页时把路径加到这里 */
-const ROOT_ROUTES = new Set(['/'])
+const ROOT_ROUTES = new Set(['/', '/dash', '/mem', '/asset', '/health', '/me'])
+
+/** 底部导航：六个一级入口（对话 / 掌舵 / 记忆 / 资产 / 健康 / 我的） */
+const TABS = [
+  { to: '/', label: '对话', icon: MessagesSquare },
+  { to: '/dash', label: '掌舵', icon: Gauge },
+  { to: '/mem', label: '记忆', icon: Brain },
+  { to: '/asset', label: '资产', icon: Wallet },
+  { to: '/health', label: '健康', icon: HeartPulse },
+  { to: '/me', label: '我的', icon: UserRound },
+] as const
 
 /**
- * App UI 外壳：可滚动内容区 + **按需出现的**顶栏。
+ * App UI 外壳：可滚动内容区 + **按需出现的**顶栏 + 底部 Tab 导航。
  *
  * **顶栏只在当前页声明了标题时才渲染**：页面调 `usePageTitle('任务列表')` 才出顶栏，
  * 没声明就不渲染（不需要顶栏的页面——比如初始占位页——就不声明，初始态因此不会先冒出一条
@@ -21,16 +31,14 @@ const ROOT_ROUTES = new Set(['/'])
  * 状态栏区域——此时由 `TopBleedScrim` 自动挂一层「页面背景色 → 透明」的渐变垫底（随正文
  * 滚入渐显），避免文字与状态栏图标叠在一起（见 references/07-mobile-adaptation.md §2）。
  *
- * **不含底部导航**——导航按用户需求再加（需求里没有的入口一个都不要加）。
- * 需要底部导航时的判据与做法见 references/04-routing.md。
- *
  * 移动端要点：
  *  - 高度用 dvh 而不是 vh，避免 WebView 地址栏/手势条导致的 100vh 溢出；
  *  - 有顶栏时顶栏吃顶部安全区，无顶栏时滚动容器把顶部安全区垫成页面背景色（穿透页除外）；
  *  - 只有内容区滚动，页面本身不滚（overscroll 不会带动整页橡皮筋）；
  *  - **顶栏只放“返回 + 标题 + 本页动作”**：全局偏好类入口不属于顶栏
  *    （见 ui-design-skill 的 references/02-app-ui-mobile-h5.md §2 与 §7）；
- *  - 标题由页面自己声明，不用维护路由→标题的映射表。
+ *  - 标题由页面自己声明，不用维护路由→标题的映射表；
+ *  - 底部 Tab 只做导航，不放“发布 / 提交”这类动作。
  */
 export function AppShell() {
   const navigate = useNavigate()
@@ -83,6 +91,29 @@ export function AppShell() {
 
       {/* 穿透页：状态栏垫底渐变（随正文滚入渐显；换页时按 pathname 重挂载、重算浓度） */}
       {topBleed && !hasHeader && <TopBleedScrim key={pathname} scroller={mainRef} />}
+
+      {/* 底部 Tab：只做导航；贴底元素自己用 pb-safe-bottom 抬到手势条之上 */}
+      <nav className="shrink-0 border-t border-border bg-surface pb-safe-bottom" aria-label="主导航">
+        <ul className="flex">
+          {TABS.map(({ to, label, icon: Icon }) => (
+            <li key={to} className="flex-1">
+              <NavLink
+                to={to}
+                end={to === '/'}
+                className={({ isActive }) =>
+                  cn(
+                    'flex min-h-tap flex-col items-center justify-center gap-0.5 py-1.5 text-caption',
+                    isActive ? 'text-primary' : 'text-muted-foreground',
+                  )
+                }
+              >
+                <Icon className="size-5" aria-hidden />
+                <span>{label}</span>
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </div>
   )
 }

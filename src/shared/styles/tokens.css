@@ -6,79 +6,93 @@
  * 2. token 用「空格分隔的 RGB 通道」书写，便于 Tailwind 用 rgb(var(--x) / <alpha-value>) 支持透明度。
  * 3. 新增颜色 = 在 :root 加一个原始色阶 + 一个语义映射，缺一不可。
  * 4. 语义 token 必须成对提供前景与背景（如 --primary / --primary-foreground）。
- * 5. 前景/背景的配对要满足 4.5:1 对比度（可读性红线，门禁 G44 会逐对计算）——
- *    配出低对比度的组合通常不是"颜色不好看"，而是根本看不清。
+ * 5. 前景/背景的配对要满足 4.5:1 对比度（可读性红线，门禁 G44 会逐对计算）。
  * 6. 本工程只有一套配色：不得写死色值，也不得加 `dark:` 变体。把颜色抽成 token 是为了
- *    以后能统一调色（改一处、全局生效），不是为了做配色切换——真要切换时按用户明确要求再加。
+ *    以后能统一调色（改一处、全局生效），不是为了做配色切换。
+ *
+ * 本工程是「薄肌计划 BojiPlan」的同款：产品本身就是深色视觉（深空灰底 + 荧光绿主色），
+ * 所以语义 token 直接定义为深色一组的取值——只有一套值，没有第二套、不做切换。
+ * 主色 / 辅助色相来自原产品的参照配色（荧光绿 #A6FF3F 主色，青 / 紫 / 橙作数据与状态辅助）。
  * ========================================================================== */
 
 :root {
   /* ---------- 原始色阶（raw palette） ---------- */
-  --gray-0: 255 255 255;
-  --gray-50: 245 246 248;
-  --gray-100: 240 241 244;
-  --gray-150: 233 235 240;
-  --gray-200: 227 229 234;
-  --gray-300: 208 212 220;
-  --gray-400: 154 161 173;
-  --gray-500: 107 114 128;
-  --gray-550: 100 106 120;
-  --gray-700: 63 68 79;
-  --gray-800: 43 48 58;
-  --gray-850: 29 33 41;
-  --gray-900: 23 26 33;
-  --gray-950: 15 17 21;
-  --gray-1000: 0 0 0;
+  /* 深空中性阶：产品底色体系（来自参照配色的深色系） */
+  --boji-bg: 11 15 20;        /* #0B0F14 页面最底层 */
+  --boji-bg2: 14 20 28;       /* #0E141C 输入框 / 弹层底 */
+  --boji-card: 19 27 38;      /* #131B26 卡片 / 面板 */
+  --boji-card2: 24 34 49;     /* #182231 卡内次级底色 */
+  --boji-line: 31 43 58;      /* #1F2B3A 分隔线 / 描边 */
+  --boji-line2: 39 55 75;     /* #27374B 输入框描边 */
+  --boji-accent: 27 39 53;    /* #1B2735 按压 / 悬浮反馈底 */
 
-  --indigo-100: 238 240 255;
-  --indigo-300: 165 180 252;
-  --indigo-400: 129 140 248;
-  --indigo-500: 99 102 241;
-  --indigo-600: 79 70 229;
-  --indigo-900: 35 42 77;
+  --boji-txt: 230 238 247;    /* #E6EEF7 正文 */
+  --boji-sub: 140 160 181;    /* #8CA0B5 次要文字 */
+  --boji-sub2: 122 141 163;   /* #7A8DA3 三级文字（时间戳 / 表头） */
 
-  --green-300: 52 211 153;
-  --green-800: 22 101 52;
-  --amber-300: 251 191 36;
-  --amber-800: 146 64 14;
-  --red-300: 248 113 113;
-  --red-700: 185 28 28;
+  --boji-acc: 166 255 63;     /* #A6FF3F 主色：荧光绿（碳基服务器在线色） */
+  --boji-acc-ink: 10 15 5;    /* #0A0F05 主色上的文字（深墨绿） */
+  --boji-acc-dim: 30 43 18;   /* #1E2B12 主色淡底 */
 
-  /* ---------- 语义 token（明色主题） ---------- */
-  --background: var(--gray-50);
-  --foreground: 23 24 28;
+  --boji-cyan: 34 211 238;    /* #22D3EE 数据线 / 信息 */
+  --boji-cyan-ink: 4 34 43;   /* #04222B 青色上的文字 */
+  --boji-cyan-dim: 12 46 54;  /* 青色淡底 */
 
-  --surface: var(--gray-0);
-  --surface-foreground: 23 24 28;
-  --surface-muted: var(--gray-100);
+  --boji-violet: 167 139 250; /* #A78BFA 睡眠 / 记忆 */
+  --boji-violet-ink: 25 16 48;
+  --boji-orange: 251 146 60;  /* #FB923C 体脂 / 创造 */
+  --boji-orange-ink: 48 22 4;
+  --boji-warn: 255 176 32;    /* #FFB020 警示 */
+  --boji-warn-ink: 43 29 2;
+  --boji-bad: 255 92 92;      /* #FF5C5C 负债 / 错误 */
+  --boji-bad-ink: 43 4 4;
 
-  --muted: var(--gray-100);
+  /* ---------- 语义 token（深色主题，唯一一套） ---------- */
+  --background: var(--boji-bg);
+  --foreground: var(--boji-txt);
+
+  --surface: var(--boji-card);
+  --surface-foreground: var(--boji-txt);
+  --surface-muted: var(--boji-card2);
+
+  --muted: var(--boji-card2);
   /* 次要文字：必须能在 background / surface / muted 三种底上都达到 4.5:1（门禁 G44 会算） */
-  --muted-foreground: var(--gray-550);
+  --muted-foreground: var(--boji-sub);
 
-  --primary: var(--indigo-600);
-  --primary-foreground: var(--gray-0);
-  --primary-soft: var(--indigo-100);
+  --primary: var(--boji-acc);
+  --primary-foreground: var(--boji-acc-ink);
+  --primary-soft: var(--boji-acc-dim);
 
-  --secondary: var(--gray-150);
-  --secondary-foreground: 43 45 51;
+  --secondary: var(--boji-card2);
+  --secondary-foreground: var(--boji-txt);
 
-  --accent: 236 238 243;
-  --accent-foreground: 31 33 38;
+  --accent: var(--boji-accent);
+  --accent-foreground: var(--boji-txt);
 
-  /* 状态色同时要当"文字色"用（徽标 / 提示 / 价格）：明色主题下必须够深才能到 4.5:1，
-   * 所以用的是 700/800 档。想换回 500/600 档前先跑一遍门禁 G44。 */
-  --success: var(--green-800);
-  --success-foreground: var(--gray-0);
-  --warning: var(--amber-800);
-  --warning-foreground: var(--gray-0);
-  --danger: var(--red-700);
-  --danger-foreground: var(--gray-0);
+  /* 数据与状态色：同时要当"文字色"（曲线图例 / 徽标 / 提示）和"淡底色"用 */
+  --info: var(--boji-cyan);
+  --info-foreground: var(--boji-cyan-ink);
+  --info-soft: var(--boji-cyan-dim);
 
-  --border: var(--gray-200);
-  --input: 223 226 232;
-  --ring: var(--indigo-600);
-  --overlay: 15 17 21;
+  --violet: var(--boji-violet);
+  --violet-foreground: var(--boji-violet-ink);
+  --violet-soft: 35 28 61;
+
+  --orange: var(--boji-orange);
+  --orange-foreground: var(--boji-orange-ink);
+  --orange-soft: 56 32 10;
+
+  --success: var(--boji-acc);
+  --success-foreground: var(--boji-acc-ink);
+  --warning: var(--boji-warn);
+  --warning-foreground: var(--boji-warn-ink);
+  --danger: var(--boji-bad);
+  --danger-foreground: var(--boji-bad-ink);
+
+  --border: var(--boji-line);
+  --input: var(--boji-line2);
+  --ring: var(--boji-acc);
+  --overlay: 4 6 10;
 
   /* ---------- 形状 ---------- */
   --radius-sm: 6px;
@@ -92,9 +106,10 @@
    * 控件描边（按钮 / 输入框）仍用 1px（`border`），否则会糊成看不见。 */
   --hairline: 0.5px;
 
-  --shadow-sm: 0 1px 2px 0 rgb(15 17 21 / 0.06);
-  --shadow-md: 0 4px 12px -2px rgb(15 17 21 / 0.1);
-  --shadow-lg: 0 12px 32px -8px rgb(15 17 21 / 0.18);
+  /* 深色底上的阴影用更浓的纯黑，只给浮层（Dialog / Toast / 悬浮按钮） */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 12px 32px -8px rgb(0 0 0 / 0.6);
 
   /* ---------- 字体与排版 ---------- */
   --font-sans: -apple-system, BlinkMacSystemFont, 'HarmonyOS Sans SC', 'PingFang SC',

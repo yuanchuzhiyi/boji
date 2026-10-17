@@ -3,7 +3,7 @@
  *
  * 新增全局常量（应用名、版本号、默认分页大小等）放这里，不要散落在各页面里。
  */
-export const APP_NAME = 'p_0d6602b3ad82794d'
+export const APP_NAME = '薄肌计划 BojiPlan'
 
 export const APP_VERSION = '0.1.0'
 
@@ -14,4 +14,4 @@ export const APP_VERSION = '0.1.0'
  * 直接当标题会把它暴露出去。页面用 `usePageTitle()` 声明标题后，`document.title` 随之更新
  * （见 src/app/layout/PageTitle.tsx）；没有页面声明时回到本兜底值。
  */
-export const DOC_TITLE_FALLBACK = '应用'
+export const DOC_TITLE_FALLBACK = '薄肌计划'

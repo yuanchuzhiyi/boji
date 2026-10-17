@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 薄肌计划 BojiPlan：深空底 + 荧光绿机器人「小薄」 -->
+  <rect width="64" height="64" rx="14" fill="#0B0F14"/>
+  <circle cx="32" cy="11" r="3" fill="#A6FF3F"/>
+  <line x1="32" y1="14" x2="32" y2="21" stroke="#A6FF3F" stroke-width="2"/>
+  <rect x="12" y="21" width="40" height="33" rx="13" fill="none" stroke="#A6FF3F" stroke-width="2.4"/>
+  <rect x="21" y="29" width="6.5" height="9" rx="3.2" fill="#A6FF3F"/>
+  <rect x="36.5" y="29" width="6.5" height="9" rx="3.2" fill="#A6FF3F"/>
+  <path d="M26 43 q6 6 12 0" stroke="#A6FF3F" fill="none" stroke-width="2.2" stroke-linecap="round"/>
+</svg>

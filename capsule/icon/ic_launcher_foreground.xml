@@ -4,7 +4,29 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- 机器人「小薄」：天线 + 机身 + 双眼 + 微笑（荧光绿，深空底） -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,30 L72,54 L54,78 L36,54 Z"/>
+        android:fillColor="#A6FF3F"
+        android:pathData="M54,26a3,3 0 1,0 0.1,0z"/>
+    <path
+        android:strokeColor="#A6FF3F"
+        android:strokeWidth="2"
+        android:pathData="M54,30L54,36"/>
+    <path
+        android:strokeColor="#A6FF3F"
+        android:strokeWidth="2.4"
+        android:fillColor="#00000000"
+        android:pathData="M36,36h36a13,13 0 0,1 13,13v22a13,13 0 0,1 -13,13h-36a13,13 0 0,1 -13,-13v-22a13,13 0 0,1 13,-13z"/>
+    <path
+        android:fillColor="#A6FF3F"
+        android:pathData="M43,48h7v10h-7z"/>
+    <path
+        android:fillColor="#A6FF3F"
+        android:pathData="M58,48h7v10h-7z"/>
+    <path
+        android:strokeColor="#A6FF3F"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M47,64q7,7 14,0"/>
 </vector>
