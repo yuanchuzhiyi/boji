@@ -216,6 +216,8 @@ export function createSeed(): BojiState {
       botName: '小薄',
       autoMem: true,
       webSearch: true,
+      ttsVoice: 'cixingnansheng',
+      autoSpeak: false,
       apiBase: DEFAULT_API_BASE,
       apiKey: '',
     },

@@ -122,6 +122,10 @@ export interface BojiSettings {
   autoMem: boolean
   /** 联网搜索：时效性问题先调 StepSearch 再回答 */
   webSearch: boolean
+  /** 语音播报音色（StepAudio 3 TTS 的 voice ID） */
+  ttsVoice: string
+  /** 自动播报：机器人回复后自动合成语音播放 */
+  autoSpeak: boolean
   apiBase: string
   apiKey: string
 }

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Cpu, Download, Sparkles, Trash2 } from 'lucide-react'
+import { Cpu, Download, Sparkles, Trash2, Volume2 } from 'lucide-react'
 
 import { BotFace } from '@/shared/ui/BotFace'
 import { Button } from '@/shared/ui/Button'
@@ -53,6 +53,7 @@ export function MePage() {
   const [testing, setTesting] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
   const [onboardOpen, setOnboardOpen] = useState(false)
+  const [voiceDraft, setVoiceDraft] = useState(s.settings.ttsVoice || 'cixingnansheng')
 
   const botName = s.settings.botName || '小薄'
   const sinceDays = Math.max(1, Math.round((Date.now() - new Date(s.user.since).getTime()) / 86400000))
@@ -269,6 +270,49 @@ export function MePage() {
               toast({ title: v ? '联网搜索已开启' : '联网搜索已关闭' })
             }}
           />
+        </div>
+      </section>
+
+      {/* 语音 */}
+      <h2 className="px-1 pt-1 text-caption font-semibold tracking-wide text-muted-foreground">🎙️ 语音</h2>
+      <section className="rounded-md bg-surface px-4">
+        <div className="flex items-center gap-3 border-b border-border py-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-surface-muted text-info" aria-hidden>
+            <Volume2 className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-body">自动播报</p>
+            <p className="mt-0.5 text-caption text-muted-foreground">机器人回复后自动合成语音播放（StepAudio 3 TTS）；对话页每条回复也有手动播报按钮</p>
+          </div>
+          <Switch
+            checked={s.settings.autoSpeak}
+            onChange={(v) => {
+              mutate((draft) => {
+                draft.settings.autoSpeak = v
+              })
+              toast({ title: v ? '自动播报已开启' : '自动播报已关闭' })
+            }}
+          />
+        </div>
+        <div className="py-3">
+          <Input
+            label="播报音色（voice ID）"
+            value={voiceDraft}
+            onChange={(e) => setVoiceDraft(e.target.value)}
+            onBlur={() => {
+              const v = voiceDraft.trim()
+              if (v && v !== s.settings.ttsVoice) {
+                mutate((draft) => {
+                  draft.settings.ttsVoice = v
+                })
+                toast({ title: `播报音色已切换：${v}`, tone: 'success' })
+              }
+            }}
+            placeholder="cixingnansheng"
+          />
+          <p className="mt-1.5 text-caption leading-relaxed text-muted-foreground">
+            默认 <span className="text-info">cixingnansheng</span>。更多官方音色可在 StepFun 开放平台的 Voice Studio 试听并复制 ID。
+          </p>
         </div>
       </section>
 

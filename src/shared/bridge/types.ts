@@ -187,6 +187,25 @@ export interface NativeCapabilityMap {
     params: { filePath?: string; dataUrl?: string }
     result: Record<string, never>
   }
+  /** 打开麦克风开始录音（立即返回，不带文件）；结束走 stopRecordAudio 或事件 recordAudioStop */
+  recordAudio: {
+    params: {
+      /** 最长时长（毫秒，1000–600000） */
+      duration?: number
+      /** aac（落盘 .m4a）或 amr（落盘 .amr） */
+      format?: 'aac' | 'amr'
+      sampleRate?: number
+      numberOfChannels?: 1 | 2
+      encodeBitRate?: number
+    }
+    /** duration 是本次上限（毫秒），不是已录时长 */
+    result: { duration: number; format: string; sampleRate: number; numberOfChannels: number; encodeBitRate: number }
+  }
+  /** 结束当前录音，返回沙箱音频文件（虚拟 URL，可直接作 <audio src>） */
+  stopRecordAudio: {
+    params: undefined
+    result: { tempFilePath: string; duration: number; size: number }
+  }
 
   // ---- 网络（仅 https，不限制域名；第三方业务请求走这里）----
   request: {
@@ -250,6 +269,8 @@ export interface NativeEventMap {
   appHide: Record<string, never>
   networkStatusChange: NativeNetworkStatus
   memoryWarning: { level: number }
+  /** 录音到 duration 自动停时推送（主动 stopRecordAudio 不发） */
+  recordAudioStop: { tempFilePath: string; duration: number; size: number }
 }
 
 export type NativeEventName = keyof NativeEventMap

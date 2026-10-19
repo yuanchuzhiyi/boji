@@ -15,6 +15,8 @@
 
 import { getBridgeMode, invokeNative } from '@/shared/bridge'
 
+import { stripHtml } from './text'
+
 import {
   MEM_CATS,
   MODEL_SKIP,
@@ -100,7 +102,7 @@ async function readErrorBody(res: Response): Promise<ApiHttpError> {
 }
 
 /** SSE 流读取：按 "data: {...}" 行解析，[DONE] 结束 */
-async function readSSE(res: Response, onJson: (j: ChatCompletionChunk) => void): Promise<void> {
+async function readSSE<T>(res: Response, onJson: (j: T) => void): Promise<void> {
   const reader = res.body?.getReader()
   if (!reader) throw new TypeError('响应不支持流式读取')
   const decoder = new TextDecoder()
@@ -116,7 +118,7 @@ async function readSSE(res: Response, onJson: (j: ChatCompletionChunk) => void):
       if (!trimmed.startsWith('data:')) continue
       const data = trimmed.slice(5).trim()
       if (!data || data === '[DONE]') continue
-      onJson(JSON.parse(data) as ChatCompletionChunk)
+      onJson(JSON.parse(data) as T)
     }
   }
 }
@@ -141,7 +143,7 @@ async function postChat(
       ...(signal ? { signal } : {}),
     })
     if (!res.ok) throw await readErrorBody(res)
-    if (stream) await readSSE(res, onJson)
+    if (stream) await readSSE<ChatCompletionChunk>(res, onJson)
     else onJson((await res.json()) as ChatCompletionChunk)
     return
   } catch (err) {
@@ -804,8 +806,114 @@ export async function analyzeReport(
   return { summary: String(obj.summary || '').slice(0, 600), items }
 }
 
-/* ------------------------------- 错误文案 ------------------------------- */
+/* ------------------------------- 语音：ASR / TTS（StepAudio 3） ------------------------------- */
 
+/** 音频 URL（壳的虚拟 URL，同源）→ base64 */
+async function audioUrlToBase64(url: string): Promise<string> {
+  const res = await fetch(url)
+  const bytes = new Uint8Array(await res.arrayBuffer())
+  let binary = ''
+  const CHUNK = 0x8000
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK))
+  }
+  return btoa(binary)
+}
+
+export interface TranscribeCallbacks {
+  /** 增量识别文本 */
+  onDelta?: (text: string) => void
+}
+
+/**
+ * 语音识别（StepAudio 3 ASR，stepaudio-3-asr-max）：录音文件 → 文本。
+ * POST /v1/audio/asr/sse，SSE 流式推送 transcript.text.delta 增量。
+ * 入参是壳 recordAudio 落盘的 .m4a 虚拟 URL。
+ */
+export async function transcribeAudio(audioUrl: string, cb: TranscribeCallbacks = {}, signal?: AbortSignal): Promise<string> {
+  const s = getState()
+  const url = apiUrl(s.settings.apiBase, '/audio/asr/sse')
+  const base64 = await audioUrlToBase64(audioUrl)
+  const body = {
+    audio: {
+      data: base64,
+      input: {
+        transcription: { language: 'zh', model: 'stepaudio-3-asr-max', enable_itn: true },
+        format: { type: 'm4a' },
+      },
+    },
+  }
+  let text = ''
+  const onFrame = (j: { type?: string; delta?: string }) => {
+    if (j.type === 'transcript.text.delta' && j.delta) {
+      text += j.delta
+      cb.onDelta?.(j.delta)
+    }
+  }
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { ...authHeaders(s.settings.apiKey), Accept: 'text/event-stream' },
+      body: JSON.stringify(body),
+      ...(signal ? { signal } : {}),
+    })
+    if (!res.ok) throw await readErrorBody(res)
+    await readSSE<{ type?: string; delta?: string }>(res, onFrame)
+  } catch (err) {
+    if (signal?.aborted) throw err
+    // 真机 WebView 拦截 → 壳代发兜底（拿不到实时增量，整包按帧解析，结果等价）
+    if (getBridgeMode() === 'native' && isNetworkLikeError(err)) {
+      const res = await invokeNative('request', {
+        url,
+        method: 'POST',
+        data: body,
+        dataType: 'text',
+        timeout: 120000,
+        header: { ...authHeaders(s.settings.apiKey), Accept: 'text/event-stream' },
+      })
+      if (res.statusCode >= 400) throw new ApiHttpError(res.statusCode, String(res.data).slice(0, 300))
+      for (const line of String(res.data).split('\n')) {
+        const trimmed = line.trim()
+        if (!trimmed.startsWith('data:')) continue
+        try {
+          onFrame(JSON.parse(trimmed.slice(5).trim()) as { type?: string; delta?: string })
+        } catch {
+          /* 非 JSON 帧忽略 */
+        }
+      }
+    } else {
+      throw err
+    }
+  }
+  if (!text) throw new Error('没有识别到语音内容，请靠近麦克风重试')
+  return text
+}
+
+/**
+ * 语音合成（StepAudio 3 TTS，stepaudio-3-tts）：文本 → 音频 Blob（mp3）。
+ * POST /v1/audio/speech；input 上限 1000 字符（超出截断）。
+ */
+export async function synthesizeSpeech(text: string, opts: { voice?: string; speed?: number } = {}): Promise<Blob> {
+  const s = getState()
+  const url = apiUrl(s.settings.apiBase, '/audio/speech')
+  const input = stripHtml(text).slice(0, 1000)
+  if (!input) throw new Error('没有可播报的内容')
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: authHeaders(s.settings.apiKey),
+    body: JSON.stringify({
+      model: 'stepaudio-3-tts',
+      input,
+      voice: opts.voice || s.settings.ttsVoice || 'cixingnansheng',
+      response_format: 'mp3',
+      speed: opts.speed ?? 1,
+    }),
+  })
+  if (!res.ok) throw await readErrorBody(res)
+  return res.blob()
+}
+
+/* ------------------------------- 错误文案 ------------------------------- */
 /** 把 API 错误翻成用户能看懂的中文（401/402 分类，原版口径） */
 export function describeApiError(err: unknown): string {
   if (err instanceof ApiHttpError) {

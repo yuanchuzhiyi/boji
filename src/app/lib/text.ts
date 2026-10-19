@@ -18,6 +18,11 @@ export function stripMarkers(t: unknown): string {
     .trim()
 }
 
+/** HTML → 纯文本（播报 / 上下文注入用；先剥标签再剥标记） */
+export function stripHtml(s: unknown): string {
+  return stripMarkers(String(s ?? '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ''))
+}
+
 /** 模型输出 → 气泡 HTML：先转义，再放行 **粗体** 与换行 */
 export function fmt(s: unknown): string {
   return esc(s)

@@ -7,5 +7,5 @@
   "description": "碳基服务器，AI 掌舵：每日打卡、训练计划、体检解读、资产曲线与生命倒计时的个人 AI 掌舵 Agent",
   "orientation": "portrait",
   "fullscreen": false,
-  "permissions": ["album", "camera"]
+  "permissions": ["album", "camera", "record"]
 }
