@@ -7,7 +7,11 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.provider.MediaStore;
+import android.util.Base64;
+import android.util.Log;
 import android.webkit.ValueCallback;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
@@ -26,7 +30,10 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.webkit.WebViewAssetLoader;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -64,17 +71,46 @@ public class MainActivity extends AppCompatActivity {
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (fileCallback == null) return;
-                    Uri[] results = null;
-                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        Uri u = result.getData().getData();
-                        if (u != null) results = new Uri[]{u};
+                    Uri picked = null;
+                    if (result.getResultCode() == RESULT_OK) {
+                        if (result.getData() != null && result.getData().getData() != null) {
+                            picked = result.getData().getData();
+                        } else if (cameraImageUri != null) {
+                            picked = cameraImageUri;
+                        }
                     }
-                    if (results == null && cameraImageUri != null) {
-                        results = new Uri[]{cameraImageUri};
-                        cameraImageUri = null;
+                    cameraImageUri = null;
+                    if (picked != null) {
+                        /* 原生读取并缩放成 base64，直接注入页面：
+                           绕开部分 WebView 上 <input type=file> 的 change 事件 /
+                           FileReader 不触发的问题。注入后仍回调 null 重置输入框。 */
+                        final Uri uri = picked;
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                final String b64 = uriToScaledBase64(uri);
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        if (b64 != null && webView != null) {
+                                            String js = "window.__bojiOnNativeImage && window.__bojiOnNativeImage('" + b64 + "')";
+                                            webView.evaluateJavascript(js, null);
+                                        } else if (webView != null) {
+                                            webView.evaluateJavascript(
+                                                "window.__bojiToast && window.__bojiToast('图片读取失败，请重试')", null);
+                                        }
+                                        if (fileCallback != null) {
+                                            fileCallback.onReceiveValue(null);
+                                            fileCallback = null;
+                                        }
+                                    }
+                                });
+                            }
+                        }).start();
+                    } else {
+                        fileCallback.onReceiveValue(null);
+                        fileCallback = null;
                     }
-                    fileCallback.onReceiveValue(results);
-                    fileCallback = null;
                 });
 
         cameraPermissionLauncher = registerForActivityResult(
@@ -168,6 +204,45 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.loadUrl("https://" + APP_HOST + "/assets/www/index.html");
+    }
+
+    /* 读取相册/拍照 Uri，缩放到长边 1400px，JPEG 85，返回 Base64（不含 data: 前缀） */
+    private String uriToScaledBase64(Uri uri) {
+        InputStream is = null;
+        try {
+            is = getContentResolver().openInputStream(uri);
+            if (is == null) return null;
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inJustDecodeBounds = true;
+            BitmapFactory.decodeStream(is, null, opts);
+            is.close();
+            is = getContentResolver().openInputStream(uri);
+            if (is == null) return null;
+            int max = 1400, sample = 1;
+            int longEdge = Math.max(opts.outWidth, opts.outHeight);
+            while (longEdge / sample > max) sample *= 2;
+            BitmapFactory.Options opts2 = new BitmapFactory.Options();
+            opts2.inSampleSize = sample;
+            Bitmap bmp = BitmapFactory.decodeStream(is, null, opts2);
+            is.close();
+            if (bmp == null) return null;
+            /* 二次精确缩放 */
+            int w = bmp.getWidth(), h = bmp.getHeight();
+            int le = Math.max(w, h);
+            if (le > max) {
+                float r = max / (float) le;
+                bmp = Bitmap.createScaledBitmap(bmp, Math.round(w * r), Math.round(h * r), true);
+            }
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            bmp.compress(Bitmap.CompressFormat.JPEG, 85, bos);
+            byte[] bytes = bos.toByteArray();
+            bmp.recycle();
+            return Base64.encodeToString(bytes, Base64.NO_WRAP);
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (is != null) { try { is.close(); } catch (IOException ignored) {} }
+        }
     }
 
     private File createImageFile() throws IOException {

@@ -348,7 +348,7 @@ main{flex:1;position:relative;overflow:hidden}
         <div id="imgStrip" style="display:none;gap:8px;padding-bottom:9px;flex-wrap:wrap"></div>
         <div id="inputRow">
           <textarea id="msgInput" rows="1" placeholder="打卡 / 记住我 / 问它都行 / 发图片"></textarea>
-          <button class="sideBtn" onclick="document.getElementById('imgFileInput').click()" title="发送图片">
+          <button class="sideBtn" onclick="bojiPickImage()" title="发送图片">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="m5 17 4.5-4.5 3 3L16 12l3 3"/></svg>
           </button>
           <button id="micBtn" class="sideBtn" onclick="recToggle()" title="语音输入">
@@ -361,7 +361,7 @@ main{flex:1;position:relative;overflow:hidden}
             <svg viewBox="0 0 24 24" fill="none" stroke="#0A0F05" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
           </button>
         </div>
-        <input type="file" id="imgFileInput" accept="image/*" multiple style="display:none" onchange="onImgFiles(this)">
+        <input type="file" id="imgFileInput" accept="image/*" style="position:fixed;left:0;top:0;width:1px;height:1px;opacity:0" onchange="onImgFiles(this)">
         <div id="recBar" style="display:none;align-items:center;gap:10px">
           <span style="width:9px;height:9px;border-radius:50%;background:#FF5C5C;flex:none;animation:recPulse 1s infinite"></span>
           <span style="flex:1;font-size:13px;color:var(--txt)">录音中 <span id="recTime" style="font-variant-numeric:tabular-nums">0:00</span></span>
@@ -458,10 +458,10 @@ main{flex:1;position:relative;overflow:hidden}
       <div id="healthBody"></div>
       <div id="healthGenMeta" style="display:none;font-size:11px;color:var(--cyan);margin-top:10px"></div>
       <div style="display:flex;gap:8px;margin-top:12px">
-        <button class="miniBtn" onclick="document.getElementById('reportFile').click()">📤 上传体检报告</button>
+        <button class="miniBtn" onclick="bojiPickReport()">📤 上传体检报告</button>
         <button class="miniBtn ghost" onclick="openEditHealth()">✍️ 手动录入</button>
       </div>
-      <input type="file" id="reportFile" accept="image/*" style="display:none" onchange="onReportFile(this)">
+      <input type="file" id="reportFile" accept="image/*" style="position:fixed;left:0;top:0;width:1px;height:1px;opacity:0" onchange="onReportFile(this)">
     </div>
     <div class="card">
       <div class="cardTitle">📏 身体数据 <span class="more" onclick="openAddBody()">+ 记快照</span></div>
@@ -2168,18 +2168,37 @@ function onReportFile(input){
   var f = input.files && input.files[0];
   input.value = '';
   if(!f) return;
-  if(!apiKey()){ toast('体检报告 AI 总结需要先接入 API（我的 → StepCode 接入）'); return; }
-    toast('📤 ' + botName() + '正在读报告…');
+  if(!apiKey()){ toast('体检报告 AI 总结需要先接入 API（我的 → API 接入）'); return; }
   compressImage(f, function(dataUrl){
-    analyzeReport(dataUrl).then(function(res){
-      S.health = { summary:res.summary, items:res.items, updatedAt:Date.now(), source:'ai' };
-      save(); renderHealth();
-      toast('🤖 体检报告总结完成，已存入健康档案');
-    }).catch(function(e){
-      toast('⚠️ 分析失败：' + e.message);
-    });
+    if(dataUrl) handleReportDataUrl(dataUrl);
+    else toast('⚠️ 图片读取失败，重试一下');
   });
 }
+function handleReportDataUrl(dataUrl){
+  toast('📤 ' + botName() + '正在读报告…');
+  analyzeReport(dataUrl).then(function(res){
+    S.health = { summary:res.summary, items:res.items, updatedAt:Date.now(), source:'ai' };
+    save(); renderHealth();
+    toast('🤖 体检报告总结完成，已存入健康档案');
+  }).catch(function(e){
+    toast('⚠️ 分析失败：' + e.message);
+  });
+}
+/* ---- 安卓原生注入：绕开 WebView 文件输入链路 ---- */
+window.__bojiFileTarget = null;
+function bojiPickImage(){ window.__bojiFileTarget = 'chat'; pickFile(document.getElementById('imgFileInput')); }
+function bojiPickReport(){ window.__bojiFileTarget = 'report'; pickFile(document.getElementById('reportFile')); }
+function pickFile(input){ if(input) input.click(); }
+window.__bojiToast = function(msg){ if(typeof toast === 'function') toast(msg); };
+window.__bojiOnNativeImage = function(b64){
+  var url = 'data:image/jpeg;base64,' + b64;
+  var target = window.__bojiFileTarget;
+  window.__bojiFileTarget = null;
+  if(target === 'report'){ handleReportDataUrl(url); return; }
+  pendingImgs.push({ url:url, file:null });
+  renderImgStrip();
+  toast('✅ 图片已添加');
+};
 function compressImage(file, cb){
   /* 三层兜底：canvas 压缩 → 原图 dataURL → blob URL；回调保证必达一次 */
   var called = false;
