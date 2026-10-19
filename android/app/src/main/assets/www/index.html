@@ -912,15 +912,21 @@ function onSendClick(){
   inp.value = ''; inp.style.height = 'auto';
   pendingImgs = [];
   renderImgStrip();
-  addMsgUser(t, imgs);
-  S.chat.push({ who:'user', text:t, imgs:imgs, t:Date.now() });
-  var it = detect(t);
+  prepareImgs(imgs, function(urls){
+    if(imgs.length && !urls.length){ toast('图片读取失败，重试一下'); return; }
+    dispatchMessage(t, urls);
+  });
+}
+function dispatchMessage(t, urls){
+  addMsgUser(t, urls);
+  S.chat.push({ who:'user', text:t, imgs:urls, t:Date.now() });
+  var it = detect(t || '');
   applyLog(it);                       /* 打卡/记忆类：本地先落数据 */
   var typing = addTyping();
   if(apiKey()){
-    askStepfun(t, it, typing);        /* 已配置 Key：所有问题走真实 API */
+    askStepfun(t || '请看这些图片并回答', it, typing, urls);   /* 所有问题走真实 API */
   } else {
-    mockReply(t, it).then(function(r){
+    mockReply(t || '你好', it).then(function(r){
       typing.remove(); $('#hBot').classList.remove('thinking');
       addMsg('bot', r.html);
       S.chat.push({ who:'bot', html:r.html, t:Date.now() });
@@ -1077,7 +1083,7 @@ function buildSystemPrompt(){
     '【长期记忆规则】如果用户在这轮对话里透露了值得长期记住的信息（职业、身份、目标、习惯、偏好、人际关系、重要决定、身体数据等），请在回答的最后单独输出一行：[[MEMORY:分类|内容]]，分类只能是：身体/决策/财富/偏好/目标/关系；内容写事实本身，25 字以内。没有值得记的信息就什么都不要加。这一行不会展示给用户。';
 }
 
-function buildMessages(t){
+function buildMessages(t, imgs){
   var msgs = [{ role:'system', content: buildSystemPrompt() }];
   var hist = S.chat.slice(-16).map(function(m){
     if(m.who === 'bot') return { role:'assistant', content: stripTags(m.html) };
@@ -1093,7 +1099,21 @@ function buildMessages(t){
     msgs.push({ role:'system', content:'（系统提示：用户刚说的「' + memNote + '」已被写入长期记忆库，请确认已记住）' });
     memNote = null;
   }
-  msgs.push({ role:'user', content:t });
+  /* 当前消息可能已被 dispatchMessage 放进历史（带图），避免重复追加 */
+  var last = msgs[msgs.length - 1];
+  var sameAsLast = last && last.role === 'user' && (
+    (typeof last.content === 'string' && last.content === t) ||
+    (Array.isArray(last.content) && last.content[0] && last.content[0].text === t)
+  );
+  if(!sameAsLast){
+    if(imgs && imgs.length){
+      var cur = [{ type:'text', text: t || '请看这些图片并回答' }];
+      imgs.forEach(function(u){ cur.push({ type:'image_url', image_url:{ url:u } }); });
+      msgs.push({ role:'user', content: cur });
+    } else {
+      msgs.push({ role:'user', content:t });
+    }
+  }
   return msgs;
 }
 
@@ -1229,9 +1249,9 @@ function addMsgStream(){
   return box.querySelector('.bubble');
 }
 
-function askStepfun(t, it, typing){
+function askStepfun(t, it, typing, imgs){
   $('#hBot').classList.add('thinking');
-  var msgs = buildMessages(t);
+  var msgs = buildMessages(t, imgs);
   var bubble = null, sources = [];
   function ensureBubble(){
     if(!bubble){ typing.remove(); bubble = addMsgStream(); }
@@ -1773,19 +1793,22 @@ function doDelLatest(id){
 }
 
 /* ============ 图片输入（多模态） ============ */
-var pendingImgs = [];
+var pendingImgs = [];   /* [{url, file}] */
+
 function onImgFiles(input){
   var files = input.files;
   input.value = '';
   if(!files || !files.length) return;
   var left = 3 - pendingImgs.length;
   if(left <= 0){ toast('一次最多发 3 张图片'); return; }
-  var list = Array.prototype.slice.call(files, 0, left);
+  /* 先把 File 对象拷进普通数组：部分 WebView 在 input.value='' 后 files 会失效 */
+  var list = [];
+  for(var i = 0; i < files.length && i < left; i++) list.push(files[i]);
   if(files.length > left) toast('一次最多发 3 张，已取前 ' + left + ' 张');
   var done = 0;
   list.forEach(function(f){
-    compressImage(f, function(dataUrl){
-      if(dataUrl) pendingImgs.push(dataUrl);
+    compressImage(f, function(url){
+      if(url) pendingImgs.push({ url:url, file:f });
       done++;
       if(done === list.length) renderImgStrip();
     });
@@ -1795,8 +1818,8 @@ function renderImgStrip(){
   var box = $('#imgStrip');
   if(!box) return;
   box.style.display = pendingImgs.length ? 'flex' : 'none';
-  box.innerHTML = pendingImgs.map(function(u, i){
-    return '<div class="imgThumbWrap"><img class="imgThumb" src="' + u + '">' +
+  box.innerHTML = pendingImgs.map(function(it, i){
+    return '<div class="imgThumbWrap"><img class="imgThumb" src="' + it.url + '">' +
       '<button class="imgThumbDel" onclick="delPendingImg(' + i + ')">✕</button></div>';
   }).join('');
 }
@@ -1808,6 +1831,24 @@ function viewImg(src){
   openModal('<h3>图片</h3><img src="' + src + '" style="width:100%;border-radius:12px;margin-top:8px">' +
     '<div class="mBtns" style="margin-top:14px"><button class="ghost" onclick="closeModal()">关闭</button></div>');
 }
+/* 发送前把 blob: URL 转成 dataURL（API 只认 dataURL / 公网 URL） */
+function prepareImgs(list, cb){
+  var out = [], n = 0;
+  if(!list.length){ cb(out); return; }
+  list.forEach(function(it){
+    if(it.url && it.url.indexOf('blob:') === 0 && it.file){
+      try{
+        var r = new FileReader();
+        r.onload = function(){ out.push(r.result); if(++n === list.length) cb(out); };
+        r.onerror = function(){ if(++n === list.length) cb(out); };
+        r.readAsDataURL(it.file);
+      }catch(e){ if(++n === list.length) cb(out); }
+    } else {
+      out.push(it.url);
+      if(++n === list.length) cb(out);
+    }
+  });
+}
 /* 用户消息渲染：图片 + 文字（历史与实时共用） */
 function userBubbleHtml(m){
   var imgs = (m.imgs && m.imgs.length)
@@ -1817,8 +1858,6 @@ function userBubbleHtml(m){
     : '';
   return imgs + esc(m.text || '');
 }
-/* 压缩到 1400px JPEG（复用体检报告的压缩器） */
-function compressChatImage(file, cb){ compressImage(file, cb); }
 
 /* ============ 语音：录音(WAV) / ASR / TTS ============ */
 var TTS_VOICES = [
@@ -2142,25 +2181,44 @@ function onReportFile(input){
   });
 }
 function compressImage(file, cb){
-  var reader = new FileReader();
-  reader.onload = function(){
-    var img = new Image();
-    img.onload = function(){
-      var max = 1600, w = img.width, h = img.height;
-      if(w > max || h > max){
-        var r = Math.min(max/w, max/h);
-        w = Math.round(w*r); h = Math.round(h*r);
-      }
-      var cv = document.createElement('canvas');
-      cv.width = w; cv.height = h;
-      cv.getContext('2d').drawImage(img, 0, 0, w, h);
-      cb(cv.toDataURL('image/jpeg', 0.85));
+  /* 三层兜底：canvas 压缩 → 原图 dataURL → blob URL；回调保证必达一次 */
+  var called = false;
+  function done(v){ if(called) return; called = true; clearTimeout(guard); cb(v); }
+  var guard = setTimeout(function(){ done(''); }, 10000);
+  function fallbackBlob(){
+    try{ done(URL.createObjectURL(file)); }catch(e2){ done(''); }
+  }
+  try{
+    var reader = new FileReader();
+    reader.onload = function(){
+      var raw = reader.result;
+      try{
+        var img = new Image();
+        img.onload = function(){
+          try{
+            var max = 1400, w = img.width || 0, h = img.height || 0;
+            if(w > max || h > max){
+              var r = Math.min(max/w, max/h);
+              w = Math.max(1, Math.round(w*r)); h = Math.max(1, Math.round(h*r));
+            }
+            if(!w || !h){ done(raw); return; }
+            var cv = document.createElement('canvas');
+            cv.width = w; cv.height = h;
+            var ctx = cv.getContext ? cv.getContext('2d') : null;
+            if(!ctx){ done(raw); return; }
+            ctx.drawImage(img, 0, 0, w, h);
+            var url = cv.toDataURL('image/jpeg', 0.85);
+            if(!url || url.indexOf('data:image') !== 0){ done(raw); return; }
+            done(url);
+          }catch(err){ done(raw); }
+        };
+        img.onerror = function(){ done(raw); };
+        img.src = raw;
+      }catch(err){ done(raw); }
     };
-    img.onerror = function(){ cb(reader.result); };
-    img.src = reader.result;
-  };
-  reader.onerror = function(){ cb(''); };
-  reader.readAsDataURL(file);
+    reader.onerror = function(){ fallbackBlob(); };
+    reader.readAsDataURL(file);
+  }catch(err){ fallbackBlob(); }
 }
 function analyzeReport(dataUrl){
   var prompt = '这是我的体检报告，请通读并提取所有异常指标、诊断和疾病风险，用中文回答。' +
