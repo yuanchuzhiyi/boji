@@ -45,7 +45,7 @@ sync-web-to-app.sh        # 网页改动 → 同步进安卓工程
 adb install -r 薄肌计划-v1.0.0-debug.apk
 ```
 
-安装后进「我的 → API 接入」，填入 StepFun 开放平台的 API Key（[platform.stepfun.com](https://platform.stepfun.com) 登录后创建），即可启用全部 AI 能力。
+安装后**开箱即用**——App 内置了默认 API Key（演示用途，会随 APK 和仓库分发，请勿放入重要额度）。想用自己的 Key：进「我的 → API 接入」填入 StepFun 开放平台的 Key（[platform.stepfun.com](https://platform.stepfun.com) 登录后创建），自定义 Key 优先于内置 Key。
 
 ### 跑网页版
 

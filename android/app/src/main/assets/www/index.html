@@ -132,6 +132,15 @@ main{flex:1;position:relative;overflow:hidden}
 #msgInput{flex:1;background:var(--card);border:1px solid var(--line2);border-radius:22px;
   padding:11px 16px;font-size:14px;color:var(--txt);resize:none;max-height:100px;line-height:1.4}
 #msgInput:focus{border-color:rgba(166,255,63,.5)}
+.sideBtn{width:40px;height:40px;flex:none;border-radius:50%;background:var(--card2);border:1px solid var(--line2);color:var(--sub);display:grid;place-items:center}
+.sideBtn svg{width:19px;height:19px}
+.sideBtn.on{color:var(--acc);border-color:var(--acc);background:var(--acc-dim)}
+.sideBtn.rec{color:#FF5C5C;border-color:#FF5C5C;background:rgba(255,92,92,.12)}
+@keyframes recPulse{0%,100%{opacity:1}50%{opacity:.25}}
+.chatImg{max-width:180px;border-radius:10px;display:block;margin-bottom:6px;cursor:pointer}
+.imgThumb{width:52px;height:52px;object-fit:cover;border-radius:9px;border:1px solid var(--line2)}
+.imgThumbWrap{position:relative;display:inline-block}
+.imgThumbDel{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#FF5C5C;color:#fff;font-size:11px;display:grid;place-items:center;font-weight:700}
 #sendBtn{width:44px;height:44px;flex:none;border-radius:50%;background:linear-gradient(135deg,#C6FF5E,#8FE01E);
   display:grid;place-items:center;box-shadow:0 4px 16px rgba(166,255,63,.3)}
 #sendBtn:active{transform:scale(.92)}
@@ -332,14 +341,32 @@ main{flex:1;position:relative;overflow:hidden}
   <main>
     <!-- ================= 聊天 ================= -->
     <section class="tab active" id="tabChat">
+      <div id="chatLifeBar" onclick="switchTab('me')" style="flex:none;text-align:center;padding:7px 12px;font-size:11px;color:var(--sub2);border-bottom:1px solid var(--line);cursor:pointer;letter-spacing:.5px"></div>
       <div id="chatScroll"></div>
       <div id="composer">
         <div id="quickRow"></div>
+        <div id="imgStrip" style="display:none;gap:8px;padding-bottom:9px;flex-wrap:wrap"></div>
         <div id="inputRow">
-          <textarea id="msgInput" rows="1" placeholder="打卡 / 记住我 / 问它都行"></textarea>
+          <textarea id="msgInput" rows="1" placeholder="打卡 / 记住我 / 问它都行 / 发图片"></textarea>
+          <button class="sideBtn" onclick="document.getElementById('imgFileInput').click()" title="发送图片">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="m5 17 4.5-4.5 3 3L16 12l3 3"/></svg>
+          </button>
+          <button id="micBtn" class="sideBtn" onclick="recToggle()" title="语音输入">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg>
+          </button>
+          <button id="ttsBtn" class="sideBtn" onclick="toggleTTS()" title="语音播报">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 9H3v6h3.5L11 19V5z"/><path d="M15.5 9.5a4 4 0 0 1 0 5M18.5 7a8 8 0 0 1 0 10"/></svg>
+          </button>
           <button id="sendBtn" onclick="onSendClick()">
             <svg viewBox="0 0 24 24" fill="none" stroke="#0A0F05" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
           </button>
+        </div>
+        <input type="file" id="imgFileInput" accept="image/*" multiple style="display:none" onchange="onImgFiles(this)">
+        <div id="recBar" style="display:none;align-items:center;gap:10px">
+          <span style="width:9px;height:9px;border-radius:50%;background:#FF5C5C;flex:none;animation:recPulse 1s infinite"></span>
+          <span style="flex:1;font-size:13px;color:var(--txt)">录音中 <span id="recTime" style="font-variant-numeric:tabular-nums">0:00</span></span>
+          <button class="miniBtn ghost" onclick="recStop(true)">取消</button>
+          <button class="miniBtn" onclick="recStop(false)">完成</button>
         </div>
       </div>
     </section>
@@ -493,6 +520,20 @@ main{flex:1;position:relative;overflow:hidden}
       <div class="secTitle">📚 理论库（访谈同款）</div>
       <div id="theoryList"></div>
 
+      <div class="secTitle">🎤 语音</div>
+      <div class="card">
+        <div class="rowItem">
+          <div class="rIcon">🔊</div>
+          <div class="rMain">语音播报<div class="rSub">开启后，机器人的每条回复自动用 StepAudio 合成语音播放</div></div>
+          <div class="toggle" id="tgTTS" onclick="toggleTTS()"></div>
+        </div>
+        <div style="padding:13px 2px 4px">
+          <div style="font-size:11.5px;color:var(--sub2);margin-bottom:7px">播报音色（StepAudio 官方音色）</div>
+          <select id="ttsVoiceSel" onchange="S.settings.ttsVoice=this.value;save();toast('🗣️ 音色已切换')" style="width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14px;color:var(--txt)"></select>
+        </div>
+        <div style="font-size:11px;color:var(--sub2);line-height:1.7;padding:4px 2px 2px">语音输入：对话页输入框旁的 🎤 按钮，录音后由 stepaudio-3-asr-max 转成文字填入输入框。<br>语音输出：stepaudio-2.5-tts，mp3 格式实时合成播放。</div>
+      </div>
+
       <div class="secTitle">🔌 API 接入</div>
       <div class="card">
         <div style="font-size:12px;color:var(--sub);line-height:1.7;margin-bottom:10px">
@@ -500,6 +541,7 @@ main{flex:1;position:relative;overflow:hidden}
           ① 登录 <b style="color:var(--cyan)">StepFun 开放平台</b> platform.stepfun.com（需注册登录）<br>
           ② 控制台 → API Keys 创建 Key，粘贴到下方<br>
           <span style="color:var(--sub2)">Key 只存在你自己设备的 localStorage，不经过任何服务器。已实测 api.stepfun.com 允许浏览器跨域直连。</span>
+        <div style="font-size:11px;color:var(--sub2);line-height:1.7;margin-top:8px" id="keySourceLine"></div>
         </div>
         <div class="apiRow"><input id="apiBase" placeholder="https://api.stepfun.com/v1"></div>
         <div class="apiRow"><input id="apiKey" type="text" placeholder="sk-...（API Key）"><button class="miniBtn" onclick="saveApi()">保存</button></div>
@@ -586,6 +628,13 @@ main{flex:1;position:relative;overflow:hidden}
    ===================================================== */
 var LS_KEY = 'boji_plan_v1';
 function botName(){ return (S && S.settings && S.settings.botName) || '小薄'; }
+
+/* ============ 内置默认 API Key ============
+   演示/开箱即用：用户未填自己的 Key 时使用此 Key。
+   注意：此 Key 会随 APK 与公开仓库分发，仅用于演示，请勿放入重要额度。 */
+var DEFAULT_API_KEY = '1Z083WS4K5qUt2aXAOru6UfB6DywnglmgVd8nrX5KCgKlxc64D2vMOFVzKmyW6o6M';
+function apiKey(){ return (S && S.settings && S.settings.apiKey) ? S.settings.apiKey : DEFAULT_API_KEY; }
+function usingDefaultKey(){ return !(S && S.settings && S.settings.apiKey); }
 var TARGETS = { water: 3000, sleep: 8, train: 60, create: 1 };
 
 var MODELS_FALLBACK = [
@@ -595,12 +644,12 @@ var MODELS_FALLBACK = [
 var MODEL_SKIP = /embed|tts|asr|rerank|ocr|moderat|image|video|audio|vision-?understand/i;
 function modelList(){ return (S && S.models && S.models.length) ? S.models : MODELS_FALLBACK; }
 function fetchModels(quiet){
-  if(!S.settings.apiKey){
+  if(!apiKey()){
     if(!quiet) toast('拉取模型列表需要先填入 API Key');
     return Promise.resolve(false);
   }
   var url = (S.settings.apiBase || 'https://api.stepfun.com/v1').replace(/\/+$/,'') + '/models';
-  return fetch(url, { headers:{ 'Authorization':'Bearer ' + S.settings.apiKey } })
+  return fetch(url, { headers:{ 'Authorization':'Bearer ' + apiKey() } })
     .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(j){
       var list = (j.data || j.models || []).map(function(m){
@@ -668,7 +717,17 @@ function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 
 /* ---------------- 状态 ---------------- */
 var S = null;
-function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
+/* 历史图片只保留最近 4 条，防止 localStorage 膨胀 */
+function trimChatImgs(){
+  var n = 0;
+  for(var i = S.chat.length - 1; i >= 0; i--){
+    if(S.chat[i].imgs && S.chat[i].imgs.length){
+      n++;
+      if(n > 4) delete S.chat[i].imgs;
+    }
+  }
+}
+function save(){ trimChatImgs(); try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
 function load(){ try{ var r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : null; }catch(e){ return null; } }
 
 function getDay(k){
@@ -752,7 +811,7 @@ function seed(){
   return {
     onboarded: true,
     user: { name:'阿晨', goal:'全套掌舵', since: dstr(y), lifespan:80, birthday:'1995-06-15', gender:'男', equipment:'哑铃一对（5-20kg）、可调节卧推凳、瑜伽垫、小区单杠；无搏击条件' },
-    settings: { model:'step-5-preview', botName:'小薄', autoMem:true, apiBase:'https://api.stepfun.com/v1', apiKey:'' },
+    settings: { model:'step-5-preview', botName:'小薄', autoMem:true, tts:false, ttsVoice:'linjiajiejie', apiBase:'https://api.stepfun.com/v1', apiKey:'' },
     data: d,
     diet: seedDiet(),
     memo: seedMemo(),
@@ -825,6 +884,15 @@ function addMsg(who, html){
   $('#chatScroll').appendChild(box);
   $('#chatScroll').scrollTop = $('#chatScroll').scrollHeight;
 }
+function addMsgUser(text, imgs){
+  var box = document.createElement('div');
+  box.className = 'msg user';
+  var now = new Date();
+  var time = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  box.innerHTML = '<div><div class="bubble">' + userBubbleHtml({ text:text, imgs:imgs }) + '</div><div class="mTime">' + time + '</div></div>';
+  $('#chatScroll').appendChild(box);
+  $('#chatScroll').scrollTop = $('#chatScroll').scrollHeight;
+}
 function addTyping(){
   var box = document.createElement('div');
   box.className = 'msg bot'; box.id = 'typingMsg';
@@ -839,14 +907,17 @@ function sendText(t){ $('#msgInput').value = t; onSendClick(); }
 function onSendClick(){
   var inp = $('#msgInput');
   var t = inp.value.trim();
-  if(!t) return;
+  var imgs = pendingImgs.slice();
+  if(!t && !imgs.length) return;
   inp.value = ''; inp.style.height = 'auto';
-  addMsg('user', esc(t));
-  S.chat.push({ who:'user', text:t, t:Date.now() });
+  pendingImgs = [];
+  renderImgStrip();
+  addMsgUser(t, imgs);
+  S.chat.push({ who:'user', text:t, imgs:imgs, t:Date.now() });
   var it = detect(t);
   applyLog(it);                       /* 打卡/记忆类：本地先落数据 */
   var typing = addTyping();
-  if(S.settings.apiKey){
+  if(apiKey()){
     askStepfun(t, it, typing);        /* 已配置 Key：所有问题走真实 API */
   } else {
     mockReply(t, it).then(function(r){
@@ -854,6 +925,7 @@ function onSendClick(){
       addMsg('bot', r.html);
       S.chat.push({ who:'bot', html:r.html, t:Date.now() });
       save(); renderHeader();
+      ttsSpeak(r.html);
     });
   }
 }
@@ -920,7 +992,7 @@ function applyLog(it){
 function mockReply(t, it){
   /* 未配置 Key：明确告知 + 本地剧本兜底（提示只出现一次） */
   var r = respond(t, it);
-  if(!S.settings.apiKey && !keyNoticeShown){
+  if(!apiKey() && !keyNoticeShown){
     keyNoticeShown = true;
     r.html = noKeyNotice() +
       '<br><br><span style="color:var(--sub2);font-size:11px">▼ 以下为本地剧本引擎兜底回复（非真实模型，此提示只出现一次）</span><br><br>' + r.html;
@@ -1001,13 +1073,20 @@ function buildSystemPrompt(){
     '【长期记忆】\n' + (memTxt || '（暂无）') + '\n\n' +
     '【行为准则】用中文，像朋友一样说话但别尬聊；可以自然引用上述理论但不要堆砌；用户发打卡类消息时本地已记录，你负责确认、鼓励、指出风险；重大决策主动引导「先开图，再出兵」；不确定就说不确定；回复控制在 200 字以内，可用 emoji 和短段落。\n\n' +
     '【联网搜索】你可以调用 web_search 工具（StepSearch 全网搜索）。当用户问到时效性信息（新闻、天气、股价、赛事、最新发布）或你不确定的具体事实时，先搜索再基于结果回答，并自然提及来源；日常打卡、闲聊、理论问答不要调用。\n\n' +
+    '【图片输入】用户可能发送图片（食物、身材、体检报告、错误截图等），请结合图片内容具体回答；如果是食物或身体变化，可以顺手给一句建议，但不要主动写入记忆。\n\n' +
     '【长期记忆规则】如果用户在这轮对话里透露了值得长期记住的信息（职业、身份、目标、习惯、偏好、人际关系、重要决定、身体数据等），请在回答的最后单独输出一行：[[MEMORY:分类|内容]]，分类只能是：身体/决策/财富/偏好/目标/关系；内容写事实本身，25 字以内。没有值得记的信息就什么都不要加。这一行不会展示给用户。';
 }
 
 function buildMessages(t){
   var msgs = [{ role:'system', content: buildSystemPrompt() }];
   var hist = S.chat.slice(-16).map(function(m){
-    return { role: m.who === 'bot' ? 'assistant' : 'user', content: m.who === 'bot' ? stripTags(m.html) : (m.text || '') };
+    if(m.who === 'bot') return { role:'assistant', content: stripTags(m.html) };
+    if(m.imgs && m.imgs.length){
+      var parts = [{ type:'text', text: m.text || '请看这些图片并回答' }];
+      m.imgs.forEach(function(u){ parts.push({ type:'image_url', image_url:{ url:u } }); });
+      return { role:'user', content: parts };
+    }
+    return { role:'user', content: m.text || '' };
   });
   msgs = msgs.concat(hist);
   if(memNote){
@@ -1038,7 +1117,7 @@ function webSearch(q, n){
   var url = (S.settings.apiBase || 'https://api.stepfun.com/v1').replace(/\/+$/,'') + '/search';
   return fetch(url, {
     method:'POST',
-    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + S.settings.apiKey },
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + apiKey() },
     body: JSON.stringify({ query:q, n:n || 5 })
   }).then(function(res){
     if(!res.ok) return res.text().then(function(t){ var e = new Error('HTTP ' + res.status); e.status = res.status; e.body = t; throw e; });
@@ -1100,7 +1179,7 @@ function stepfunFetch(model, msgs, stream, tools){
   if(tools && tools.length) body.tools = tools;
   return fetch(S.settings.apiBase.replace(/\/+$/,'') + '/chat/completions', {
     method:'POST',
-    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + S.settings.apiKey },
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + apiKey() },
     body: JSON.stringify(body)
   }).then(function(res){
     if(!res.ok) return res.text().then(function(txt){
@@ -1205,6 +1284,7 @@ function askStepfun(t, it, typing){
     b.innerHTML = fmt(text) + srcTag() + sourcesCard(sources);
     S.chat.push({ who:'bot', html:b.innerHTML, t:Date.now(), api:true });
     absorbMemories(parseMemories(text));
+    ttsSpeak(text);
     save(); if(S.settings.autoMem) autoExtract(t); renderHeader();
   }
   round(msgs, 0);
@@ -1231,12 +1311,12 @@ function failStream(err, typing){
 function testConnection(){
   var st = $('#apiStatus');
   if(!st) return;
-  if(!S.settings.apiKey){ st.textContent = '请先保存 API Key'; st.style.color = 'var(--warn)'; return; }
+  if(!apiKey()){ st.textContent = '请先保存 API Key'; st.style.color = 'var(--warn)'; return; }
   st.textContent = '测试中…'; st.style.color = 'var(--sub2)';
   /* 专用探针：max_tokens=1 只要 HTTP 200 就算通（推理模型下 content 为空属正常） */
   fetch((S.settings.apiBase || 'https://api.stepfun.com/v1').replace(/\/+$/,'') + '/chat/completions', {
     method:'POST',
-    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + S.settings.apiKey },
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + apiKey() },
     body: JSON.stringify({ model: S.settings.model, messages:[{ role:'user', content:'ping' }], max_tokens: 1 })
   }).then(function(res){
     if(!res.ok) return res.text().then(function(t){ var e = new Error('HTTP ' + res.status); e.status = res.status; e.body = t; throw e; });
@@ -1692,6 +1772,210 @@ function doDelLatest(id){
   save(); renderAsset(); closeModal(); toast('已删除该次快照');
 }
 
+/* ============ 图片输入（多模态） ============ */
+var pendingImgs = [];
+function onImgFiles(input){
+  var files = input.files;
+  input.value = '';
+  if(!files || !files.length) return;
+  var left = 3 - pendingImgs.length;
+  if(left <= 0){ toast('一次最多发 3 张图片'); return; }
+  var list = Array.prototype.slice.call(files, 0, left);
+  if(files.length > left) toast('一次最多发 3 张，已取前 ' + left + ' 张');
+  var done = 0;
+  list.forEach(function(f){
+    compressImage(f, function(dataUrl){
+      if(dataUrl) pendingImgs.push(dataUrl);
+      done++;
+      if(done === list.length) renderImgStrip();
+    });
+  });
+}
+function renderImgStrip(){
+  var box = $('#imgStrip');
+  if(!box) return;
+  box.style.display = pendingImgs.length ? 'flex' : 'none';
+  box.innerHTML = pendingImgs.map(function(u, i){
+    return '<div class="imgThumbWrap"><img class="imgThumb" src="' + u + '">' +
+      '<button class="imgThumbDel" onclick="delPendingImg(' + i + ')">✕</button></div>';
+  }).join('');
+}
+function delPendingImg(i){
+  pendingImgs.splice(i, 1);
+  renderImgStrip();
+}
+function viewImg(src){
+  openModal('<h3>图片</h3><img src="' + src + '" style="width:100%;border-radius:12px;margin-top:8px">' +
+    '<div class="mBtns" style="margin-top:14px"><button class="ghost" onclick="closeModal()">关闭</button></div>');
+}
+/* 用户消息渲染：图片 + 文字（历史与实时共用） */
+function userBubbleHtml(m){
+  var imgs = (m.imgs && m.imgs.length)
+    ? '<div class="imgRow">' + m.imgs.map(function(u){
+        return '<img class="chatImg" src="' + u + '" onclick="viewImg(this.src)">';
+      }).join('') + '</div>'
+    : '';
+  return imgs + esc(m.text || '');
+}
+/* 压缩到 1400px JPEG（复用体检报告的压缩器） */
+function compressChatImage(file, cb){ compressImage(file, cb); }
+
+/* ============ 语音：录音(WAV) / ASR / TTS ============ */
+var TTS_VOICES = [
+  { id:'linjiajiejie', n:'邻家姐姐（推荐）' },
+  { id:'jilingshaonv', n:'机灵少女' },
+  { id:'ruanmengnvsheng', n:'软萌女声' },
+  { id:'jingdiannvsheng', n:'经典女声' },
+  { id:'wenrounvsheng', n:'温柔女声' },
+  { id:'wenrounansheng', n:'温柔男声' },
+  { id:'cixingnansheng', n:'磁性男声' },
+  { id:'yuanqinansheng', n:'元气男声' }
+];
+var recorder = { ctx:null, proc:null, stream:null, chunks:[], t0:0, timer:null, src:null };
+var ttsAudio = null;
+
+function recToggle(){
+  if(recorder.ctx) recStop(false);
+  else recStart();
+}
+function recStart(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ toast('当前环境不支持录音'); return; }
+  navigator.mediaDevices.getUserMedia({ audio:true }).then(function(stream){
+    var AC = window.AudioContext || window.webkitAudioContext;
+    var ctx = new AC();
+    var srcNode = ctx.createMediaStreamSource(stream);
+    var proc = ctx.createScriptProcessor(4096, 1, 1);
+    recorder.ctx = ctx; recorder.proc = proc; recorder.stream = stream; recorder.src = srcNode; recorder.chunks = [];
+    proc.onaudioprocess = function(e){ recorder.chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+    srcNode.connect(proc); proc.connect(ctx.destination);
+    recorder.t0 = Date.now();
+    $('#inputRow').style.display = 'none';
+    $('#recBar').style.display = 'flex';
+    $('#micBtn').classList.add('rec');
+    recorder.timer = setInterval(function(){
+      var s = Math.floor((Date.now() - recorder.t0) / 1000);
+      $('#recTime').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+      if(s >= 60){ recStop(false); }
+    }, 250);
+    toast('🎤 开始录音，说完点「完成」');
+  }).catch(function(e){
+    toast('无法使用麦克风：' + (e && e.message ? e.message : e));
+  });
+}
+function recStop(cancel){
+  clearInterval(recorder.timer);
+  try{ if(recorder.proc) recorder.proc.disconnect(); }catch(e){}
+  try{ if(recorder.src) recorder.src.disconnect(); }catch(e){}
+  try{ if(recorder.stream) recorder.stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
+  var ctx = recorder.ctx, chunks = recorder.chunks, rate = ctx ? ctx.sampleRate : 16000;
+  try{ if(ctx) ctx.close(); }catch(e){}
+  recorder.ctx = null; recorder.proc = null; recorder.src = null; recorder.stream = null;
+  $('#inputRow').style.display = 'flex';
+  $('#recBar').style.display = 'none';
+  $('#micBtn').classList.remove('rec');
+  if(cancel){ recorder.chunks = []; toast('已取消录音'); return; }
+  if(!chunks.length){ toast('录音太短'); return; }
+  if(!apiKey()){ toast('语音识别需要先接入 API'); return; }
+  var b64 = encodeWav(chunks, rate);
+  toast('🔍 识别中…');
+  asrRecognize(b64).then(function(text){
+    if(text){
+      var inp = $('#msgInput');
+      inp.value = (inp.value ? inp.value + ' ' : '') + text;
+      inp.focus();
+      toast('✅ 识别完成');
+    } else {
+      toast('没听清，再试一次');
+    }
+  }).catch(function(e){
+    toast('⚠️ 识别失败：' + e.message);
+  });
+}
+/* Float32  chunks → 16bit PCM WAV → base64 */
+function encodeWav(chunks, sampleRate){
+  var total = 0;
+  chunks.forEach(function(c){ total += c.length; });
+  var buf = new ArrayBuffer(44 + total * 2);
+  var view = new DataView(buf);
+  function ws(off, s){ for(var i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); }
+  ws(0, 'RIFF'); view.setUint32(4, 36 + total * 2, true); ws(8, 'WAVE');
+  ws(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+  ws(36, 'data'); view.setUint32(40, total * 2, true);
+  var off = 44;
+  chunks.forEach(function(c){
+    for(var i = 0; i < c.length; i++){
+      var s = Math.max(-1, Math.min(1, c[i]));
+      view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      off += 2;
+    }
+  });
+  var bytes = new Uint8Array(buf), bin = '';
+  var CH = 0x8000;
+  for(var i2 = 0; i2 < bytes.length; i2 += CH){
+    bin += String.fromCharCode.apply(null, bytes.subarray(i2, i2 + CH));
+  }
+  return btoa(bin);
+}
+/* StepAudio ASR（HTTP+SSE） */
+function asrRecognize(b64){
+  var url = (S.settings.apiBase || 'https://api.stepfun.com/v1').replace(/\/+$/,'') + '/audio/asr/sse';
+  return fetch(url, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Accept':'text/event-stream', 'Authorization':'Bearer ' + apiKey() },
+    body: JSON.stringify({ audio:{ data:b64, input:{
+      transcription:{ language:'zh', model:'stepaudio-3-asr-max', enable_itn:true },
+      format:{ type:'wav' }
+    } } })
+  }).then(function(res){
+    if(!res.ok) return res.text().then(function(t){ throw new Error('HTTP ' + res.status + ' ' + t.slice(0, 80)); });
+    var full = '';
+    return readEvents(res, function(j){
+      if(j.type === 'transcript.text.delta'){ /* 增量，忽略 */ }
+      else if(j.type === 'transcript.text.done'){ full = j.text || ''; }
+      else if(j.type === 'error'){ throw new Error(j.message || '识别失败'); }
+    }).then(function(){ return full.trim(); });
+  });
+}
+/* StepAudio TTS */
+function toggleTTS(){
+  S.settings.tts = (S.settings.tts !== true);
+  save(); paintTTSBtn();
+  toast(S.settings.tts ? '🔊 语音播报已开启' : '语音播报已关闭');
+}
+function paintTTSBtn(){
+  var b = $('#ttsBtn');
+  if(b) b.classList.toggle('on', S.settings.tts === true);
+}
+function ttsSpeak(text){
+  if(!apiKey() || S.settings.tts !== true) return;
+  var t = stripTags(String(text || ''))
+    .replace(/\[\[[^\]]*\]\]/g, '')
+    .replace(/\*\*/g, '').replace(/[#>`]/g, '')
+    .replace(/\s+\n/g, '\n').trim().slice(0, 900);
+  if(!t) return;
+  var url = (S.settings.apiBase || 'https://api.stepfun.com/v1').replace(/\/+$/,'') + '/audio/speech';
+  fetch(url, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + apiKey() },
+    body: JSON.stringify({
+      model:'stepaudio-2.5-tts', input:t,
+      voice: S.settings.ttsVoice || 'linjiajiejie',
+      response_format:'mp3', speed:1.0
+    })
+  }).then(function(res){
+    if(!res.ok) return res.text().then(function(x){ throw new Error('HTTP ' + res.status); });
+    return res.blob();
+  }).then(function(blob){
+    if(ttsAudio){ try{ ttsAudio.pause(); }catch(e){} }
+    ttsAudio = new Audio(URL.createObjectURL(blob));
+    ttsAudio.play().catch(function(){});
+  }).catch(function(e){
+    console.log('[TTS]', e.message);
+  });
+}
+
 /* ============ 生命倒计时 ============ */
 function lifeEnd(){
   if(!S.user.birthday) return null;
@@ -1721,6 +2005,8 @@ function tickLife(){
   var b = new Date(S.user.birthday + 'T00:00:00');
   var pct = clamp((Date.now() - b.getTime()) / (end.getTime() - b.getTime()) * 100, 0, 100);
   var lived = Math.floor((Date.now() - b.getTime()) / 86400000);
+  var bar = document.getElementById('chatLifeBar');
+  if(bar) bar.innerHTML = '⏳ 生命倒计时 · 剩余 <b style="color:var(--acc)">' + days.toLocaleString() + '</b> 天 ' + pad2(h) + ':' + pad2(m) + ':' + pad2(s) + ' · 人生进度 ' + pct.toFixed(1) + '%';
   el.innerHTML =
     '<div style="display:flex;align-items:baseline;gap:7px">' +
     '<span style="font-size:36px;font-weight:800;color:var(--acc);line-height:1;font-variant-numeric:tabular-nums">' + days.toLocaleString() + '</span>' +
@@ -1843,7 +2129,7 @@ function onReportFile(input){
   var f = input.files && input.files[0];
   input.value = '';
   if(!f) return;
-  if(!S.settings.apiKey){ toast('体检报告 AI 总结需要先接入 API（我的 → StepCode 接入）'); return; }
+  if(!apiKey()){ toast('体检报告 AI 总结需要先接入 API（我的 → StepCode 接入）'); return; }
     toast('📤 ' + botName() + '正在读报告…');
   compressImage(f, function(dataUrl){
     analyzeReport(dataUrl).then(function(res){
@@ -1894,7 +2180,7 @@ function analyzeReport(dataUrl){
   }
   return fetch((S.settings.apiBase || 'https://api.stepfun.com/v1').replace(/\/+$/,'') + '/chat/completions', {
     method:'POST',
-    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + S.settings.apiKey },
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + apiKey() },
     body: JSON.stringify({
       model: S.settings.model,
       reasoning_effort: 'low',
@@ -2271,7 +2557,7 @@ function parsePlanFromProse(txt){
   return days.length ? days : null;
 }
 function doGeneratePlan(){
-  if(!S.settings.apiKey){ toast('AI 生成需要先接入 API（我的 → API 接入）'); return; }
+  if(!apiKey()){ toast('AI 生成需要先接入 API（我的 → API 接入）'); return; }
   var b = latestBody();
   if(!b){ toast('先在「健康」页记录一次身体快照（身高/体重/体脂）'); return; }
   var btn = $('#planGenBtn');
@@ -2317,7 +2603,7 @@ function doGeneratePlan(){
     if(useEffort) body.reasoning_effort = 'low';   /* 结构化任务用低思考强度，大幅缩短等待 */
     return fetch((S.settings.apiBase || 'https://api.stepfun.com/v1').replace(/\/+$/,'') + '/chat/completions', {
       method:'POST',
-      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + S.settings.apiKey },
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + apiKey() },
       body: JSON.stringify(body),
       signal: planGen.abort.signal
     }).then(function(res){
@@ -2465,6 +2751,19 @@ function renderMe(){
   $('#meSub').innerHTML = '已共同运行 <b>' + days + '</b> 天 · 记忆 ' + S.memories.length + ' 条<br>' +
     (S.user.birthday ? '🎂 ' + S.user.birthday : '🎂 未设置') + ' · ' + (S.user.gender || '性别未填') + ' · 预期 ' + (S.user.lifespan || 80) + ' 岁';
   $('#meModelVal').textContent = S.settings.model;
+  var ksl = $('#keySourceLine');
+  if(ksl){
+    ksl.innerHTML = usingDefaultKey()
+      ? ('当前使用：<b style="color:var(--acc)">内置默认 Key</b>（开箱即用；该 Key 随 App 分发，请勿放入重要额度）')
+      : ('当前使用：<b style="color:var(--cyan)">自定义 Key</b>（优先于内置 Key）');
+  }
+  var tgT = $('#tgTTS'); if(tgT) tgT.classList.toggle('on', S.settings.tts === true);
+  var vs = $('#ttsVoiceSel');
+  if(vs && vs.options && !vs.options.length){
+    vs.innerHTML = TTS_VOICES.map(function(v){ return '<option value="' + v.id + '">' + v.n + '</option>'; }).join('');
+  }
+  if(vs) vs.value = S.settings.ttsVoice || 'linjiajiejie';
+  paintTTSBtn();
   $('#meBotNameVal').textContent = botName();
   $('#aboutBotName').textContent = botName();
   $('#tgAutoMem').classList.toggle('on', S.settings.autoMem);
@@ -2489,8 +2788,8 @@ function saveApi(){
   S.settings.apiBase = ($('#apiBase').value || '').trim() || 'https://api.stepfun.com/v1';
   S.settings.apiKey = ($('#apiKey').value || '').trim();
   save(); renderHeader();
-  if(S.settings.apiKey) fetchModels(true).then(function(){ renderMe(); });
-  toast(S.settings.apiKey ? '⚡ 已接入 StepCode，所有问题将由 ' + S.settings.model + ' 实时回答' : 'Key 已清空，暂时回到剧本引擎');
+  if(apiKey()) fetchModels(true).then(function(){ renderMe(); });
+  toast(S.settings.apiKey ? '⚡ 已使用自定义 Key · ' + S.settings.model : '已清空，用回内置默认 Key');
 }
 function exportData(){
   var blob = new Blob([JSON.stringify(S, null, 2)], { type:'application/json' });
@@ -2527,7 +2826,7 @@ function openModelSheet(){
   paintModelSheet(false);
   $('#sheetMask').classList.add('show'); $('#sheet').classList.add('show');
   var stale = !S.modelsAt || (Date.now() - S.modelsAt > 6*3600*1000);
-  if(S.settings.apiKey && stale) refreshModels();
+  if(apiKey() && stale) refreshModels();
 }
 function refreshModels(){
   paintModelSheet(true);
@@ -2622,7 +2921,7 @@ function renderHeader(){
   if(d.water < TARGETS.water) left.push('差' + (TARGETS.water - d.water) + 'ml水');
   if(d.sleep < 7) left.push('睡眠赤字');
   if((d.fight + d.gym) === 0) left.push('未训练');
-  $('#hStatusTxt').textContent = (S.settings.apiKey ? 'API 实时' : '待接入 API') + ' · 记忆 ' + S.memories.length + ' 条' + (left.length ? ' · ' + left[0] : ' · 指标全绿');
+  $('#hStatusTxt').textContent = (usingDefaultKey() ? 'API 实时 · 内置 Key' : 'API 实时 · 自定义 Key') + ' · 记忆 ' + S.memories.length + ' 条' + (left.length ? ' · ' + left[0] : ' · 指标全绿');
 }
 function renderChat(){
   /* 注意：必须拼 HTML 字符串；不能 map 出 DOM 元素再 join（会被字符串化成 [object HTMLDivElement]） */
@@ -2631,7 +2930,7 @@ function renderChat(){
     var ts = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
     return '<div class="msg ' + m.who + '">' +
       (m.who === 'bot' ? '<div class="mAvatar">' + robotSVG() + '</div>' : '') +
-      '<div><div class="bubble">' + (m.who === 'bot' ? (m.html || '') : esc(m.text || '')) + '</div>' +
+      '<div><div class="bubble">' + (m.who === 'bot' ? (m.html || '') : userBubbleHtml(m)) + '</div>' +
       '<div class="mTime">' + ts + '</div></div></div>';
   }).join('');
   $('#chatScroll').scrollTop = $('#chatScroll').scrollHeight;
@@ -2694,6 +2993,8 @@ function init(){
   if(S.plan && S.plan.days) S.plan.days = normalizePlanDays(S.plan.days);
   if(typeof S.planOpen === 'undefined') S.planOpen = null;
   delete S.settings.autoBody;
+  if(typeof S.settings.tts === 'undefined') S.settings.tts = false;
+  if(!S.settings.ttsVoice) S.settings.ttsVoice = 'linjiajiejie';
   if(!S.user.lifespan) S.user.lifespan = 80;
   if(typeof S.user.birthday === 'undefined') S.user.birthday = '';
   if(typeof S.user.gender === 'undefined') S.user.gender = '';
@@ -2714,7 +3015,7 @@ function init(){
   setInterval(tickLife, 1000);
   morningBrief();
   renderAll();
-  if(S.settings.apiKey) fetchModels(true);
+  if(apiKey()) fetchModels(true);
   if(!S.onboarded) startOnboarding();
 }
 
