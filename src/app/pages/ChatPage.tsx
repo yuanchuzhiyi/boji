@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Cpu, Hourglass, ImagePlus, Send, Square, Volume2, X } from 'lucide-react'
+import { Cpu, Hourglass, ImagePlus, Loader2, Send, Square, Volume2, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 import { invokeNative } from '@/shared/bridge'
@@ -32,6 +32,8 @@ export function ChatPage() {
   const [busy, setBusy] = useState(false)
   /** 待发送图片：full 送模型，thumb 入历史 */
   const [pendingImages, setPendingImages] = useState<Array<{ full: string; thumb: string }>>([])
+  /** 选图后的压缩处理中（大图 / 多图在真机上要几秒） */
+  const [picking, setPicking] = useState(false)
   /** 语音播报：正在播报的消息 key */
   const [speakingKey, setSpeakingKey] = useState<string | null>(null)
   const [streaming, setStreaming] = useState<{ html: string; searching?: string } | null>(null)
@@ -62,7 +64,7 @@ export function ChatPage() {
   async function send(raw: string) {
     const text = raw.trim()
     const images = pendingImages
-    if ((!text && !images.length) || busy) return
+    if ((!text && !images.length) || busy || picking) return
     setDraft('')
     setPendingImages([])
     if (inputRef.current) inputRef.current.style.height = 'auto'
@@ -150,17 +152,41 @@ export function ChatPage() {
       toast({ title: '发送图片需要先接入 API', description: '去「我的 → API 接入」填入 Key', tone: 'warning' })
       return
     }
-    if (busy) return
+    if (busy || picking) return
+    let urls: string[] = []
     try {
       const res = await invokeNative('chooseImage', { count: 9, sourceType: ['album', 'camera'] })
-      const urls = res.tempFilePaths.slice(0, 9 - pendingImages.length)
-      if (!urls.length) return
-      const picked = await Promise.all(urls.map((url) => urlToBothDataUrls(url)))
-      setPendingImages((prev) => [...prev, ...picked].slice(0, 9))
-      if (picked.length < urls.length) toast({ title: '最多附带 9 张图片', tone: 'info' })
+      urls = res.tempFilePaths.slice(0, 9 - pendingImages.length)
     } catch (err) {
       const code = (err as { code?: string }).code
-      if (code !== 'cancelled') toast({ title: '选择图片失败，请重试', tone: 'danger' })
+      if (code === 'cancelled') return
+      if (code === 'privacy') {
+        toast({ title: '需要先同意隐私协议', description: '同意后才能读取相册 / 相机', tone: 'warning' })
+        return
+      }
+      toast({ title: '打开相册失败', description: (err as Error).message, tone: 'danger' })
+      return
+    }
+    if (!urls.length) return
+
+    // 逐张处理：单张失败不影响其它图片，失败原因直接告诉用户
+    setPicking(true)
+    try {
+      const results = await Promise.allSettled(urls.map((url) => urlToBothDataUrls(url)))
+      const ok = results.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []))
+      const failed = results.find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined
+      if (ok.length) {
+        setPendingImages((prev) => [...prev, ...ok].slice(0, 9))
+      }
+      if (failed) {
+        toast({
+          title: ok.length ? '部分图片未能添加' : '图片处理失败',
+          description: (failed.reason as Error)?.message,
+          tone: 'danger',
+        })
+      }
+    } finally {
+      setPicking(false)
     }
   }
 
@@ -315,11 +341,11 @@ export function ChatPage() {
           <button
             type="button"
             onClick={() => void pickImage()}
-            disabled={busy}
-            aria-label="发送图片"
+            disabled={busy || picking}
+            aria-label={picking ? '正在处理图片' : '发送图片'}
             className="flex size-11 shrink-0 items-center justify-center rounded-full border border-input bg-surface text-muted-foreground active:border-primary active:text-primary disabled:opacity-50"
           >
-            <ImagePlus className="size-5" aria-hidden />
+            {picking ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <ImagePlus className="size-5" aria-hidden />}
           </button>
           <VoiceInputButton
             onResult={(text) => {

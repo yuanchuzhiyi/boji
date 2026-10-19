@@ -90,8 +90,8 @@ export function HealthPage() {
       setAnalyzeMeta(`⏳ ${botName}正在读报告… 0s`)
       try {
         await analyzeDataUrl(await urlToCompressedDataUrl(url))
-      } catch {
-        toast({ title: '图片处理失败，请重试', tone: 'danger' })
+      } catch (err) {
+        toast({ title: '图片处理失败', description: (err as Error).message, tone: 'danger' })
         setAnalyzing(false)
         setAnalyzeMeta('')
       }
