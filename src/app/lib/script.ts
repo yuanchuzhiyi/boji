@@ -132,7 +132,7 @@ const THEORY_COUNT = 9
 /** 未接入 Key 时的本地剧本回复（HTML 片段） */
 export function respond(s: BojiState, t: string, it: Intent): string {
   const d = ensureDay(s.data)
-  const bot = s.settings.botName || '小薄'
+  const bot = s.settings.botName || 'biubiu'
   const model = s.settings.model
 
   if (it.type === 'math') {

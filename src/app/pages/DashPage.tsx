@@ -8,6 +8,7 @@ import { Dialog } from '@/shared/ui/Dialog'
 import { Textarea } from '@/shared/ui/Input'
 import { useToast } from '@/shared/ui/Toast'
 import { MetricRing, WeekSleepChart } from '@/shared/ui/charts'
+import { VoiceInputButton } from '@/app/components/VoiceInputButton'
 import { cn } from '@/shared/lib/cn'
 import {
   TARGETS,
@@ -41,6 +42,7 @@ export function DashPage() {
   const equipThenGenerate = useRef(false)
 
   const d = ensureDay(s.data)
+  const botName = s.settings.botName || 'biubiu'
   const train = d.fight + d.gym
   const now = new Date()
   const weekLabel = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()]
@@ -250,7 +252,7 @@ export function DashPage() {
         {generating && genMeta ? (
           <div className="py-1">
             <div className="flex items-center gap-2">
-              <span className="text-body font-semibold text-info">⏳ 小薄正在生成计划…</span>
+              <span className="text-body font-semibold text-info">⏳ {botName}正在生成计划…</span>
               <Button variant="ghost" size="sm" onClick={() => abortRef.current?.abort()}>
                 取消
               </Button>
@@ -266,7 +268,7 @@ export function DashPage() {
           </div>
         ) : planDays.length === 0 ? (
           <p className="py-1 text-caption leading-relaxed text-muted-foreground">
-            还没有训练计划。点「AI 生成」——先告诉你手头有什么器械，小薄再按你的身体数据出一份
+            还没有训练计划。点「AI 生成」——先告诉你手头有什么器械，{botName}再按你的身体数据出一份
             <b className="text-surface-foreground">写到组数×次数、组间休息秒数</b>
             的一周计划，生成后即固定。也可以直接「编辑」手写。
           </p>
@@ -403,7 +405,7 @@ export function DashPage() {
         open={equipOpen}
         onClose={() => setEquipOpen(false)}
         title="我的器械 / 条件"
-        description="小薄只推荐你手头能做的——没有搏击条件就写「无搏击条件」，它绝不会给你排搏击。"
+        description={`${botName}只推荐你手头能做的——没有搏击条件就写「无搏击条件」，它绝不会给你排搏击。`}
       >
         <Textarea
           rows={3}
@@ -429,7 +431,11 @@ export function DashPage() {
         title="一周训练计划"
         description="「周一|标题」开新一天，下面每行写一个动作（组数×次数、组间休息都要写）。空行会被忽略，保存后即固定。"
       >
-        <Textarea rows={11} value={planText} onChange={(e) => setPlanText(e.target.value)} label="计划文本" />
+        <div className="flex items-end gap-2">
+          <Textarea rows={8} value={planText} onChange={(e) => setPlanText(e.target.value)} label="计划文本" className="flex-1" />
+          <VoiceInputButton onResult={(text) => setPlanText((prev) => (prev ? `${prev}\n${text}` : text))} />
+        </div>
+        <p className="mt-1.5 text-caption text-muted-foreground">麦克风语音录入会追加为新的动作行。</p>
         <div className="mt-3 flex gap-2">
           <Button variant="ghost" className="flex-1" onClick={() => setEditPlanOpen(false)}>
             取消

@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react'
-import { Cpu, Download, Sparkles, Trash2, Volume2 } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Cpu, Download, Loader2, Sparkles, Trash2, Volume2 } from 'lucide-react'
 
 import { BotFace } from '@/shared/ui/BotFace'
 import { Button } from '@/shared/ui/Button'
@@ -10,7 +10,7 @@ import { cn } from '@/shared/lib/cn'
 import { APP_VERSION } from '@/shared/config/app'
 import { dstr, getState, mutate, resetState, uid, useBoji } from '@/app/store/boji'
 import { ModelPickerDialog } from '@/app/components/ModelPickerDialog'
-import { probeConnection } from '@/app/lib/stepfun'
+import { BUILTIN_VOICES, fetchSystemVoices, probeConnection } from '@/app/lib/stepfun'
 import { esc } from '@/app/lib/text'
 import { useLifeCountdown } from '@/app/lib/useLifeCountdown'
 
@@ -53,10 +53,22 @@ export function MePage() {
   const [testing, setTesting] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
   const [onboardOpen, setOnboardOpen] = useState(false)
-  const [voiceDraft, setVoiceDraft] = useState(s.settings.ttsVoice || 'cixingnansheng')
+  const [voices, setVoices] = useState(BUILTIN_VOICES)
+  const [voicesLoading, setVoicesLoading] = useState(false)
 
-  const botName = s.settings.botName || '小薄'
+  const botName = s.settings.botName || 'biubiu'
   const sinceDays = Math.max(1, Math.round((Date.now() - new Date(s.user.since).getTime()) / 86400000))
+
+  // 官方音色清单：有 Key 时拉开放平台，失败回退内置清单
+  useEffect(() => {
+    if (!s.settings.apiKey) return
+    setVoicesLoading(true)
+    void fetchSystemVoices().then((list) => {
+      setVoices(list)
+      setVoicesLoading(false)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   /* ---------------- 设置动作 ---------------- */
 
@@ -295,23 +307,31 @@ export function MePage() {
           />
         </div>
         <div className="py-3">
-          <Input
-            label="播报音色（voice ID）"
-            value={voiceDraft}
-            onChange={(e) => setVoiceDraft(e.target.value)}
-            onBlur={() => {
-              const v = voiceDraft.trim()
-              if (v && v !== s.settings.ttsVoice) {
+          <div className="flex items-center gap-2">
+            <select
+              aria-label="播报音色"
+              value={s.settings.ttsVoice}
+              onChange={(e) => {
                 mutate((draft) => {
-                  draft.settings.ttsVoice = v
+                  draft.settings.ttsVoice = e.target.value
                 })
-                toast({ title: `播报音色已切换：${v}`, tone: 'success' })
-              }
-            }}
-            placeholder="cixingnansheng"
-          />
+                toast({ title: `播报音色已切换：${e.target.value}`, tone: 'success' })
+              }}
+              className="min-h-tap flex-1 rounded-md border border-input bg-surface px-3 text-body text-surface-foreground"
+            >
+              {(voices.some((v) => v.id === s.settings.ttsVoice)
+                ? voices
+                : [...voices, { id: s.settings.ttsVoice, name: '当前音色' }]
+              ).map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}（{v.id}）
+                </option>
+              ))}
+            </select>
+            {voicesLoading && <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" aria-hidden />}
+          </div>
           <p className="mt-1.5 text-caption leading-relaxed text-muted-foreground">
-            默认 <span className="text-info">cixingnansheng</span>。更多官方音色可在 StepFun 开放平台的 Voice Studio 试听并复制 ID。
+            官方音色清单来自开放平台（未接入 Key 时用内置清单）；想试听更多音色可去 StepFun 开放平台的 Voice Studio。
           </p>
         </div>
       </section>
@@ -418,7 +438,7 @@ export function MePage() {
           </div>
         }
       >
-        <Input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} maxLength={8} placeholder="小薄" label="名字" />
+        <Input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} maxLength={8} placeholder="biubiu" label="名字" />
       </Dialog>
 
       {/* 我的资料 */}
@@ -426,7 +446,7 @@ export function MePage() {
         open={profileOpen}
         onClose={() => setProfileOpen(false)}
         title="我的资料"
-        description="生日和预期寿命用于生命倒计时；性别会进入小薄对你的认知。"
+        description={`生日和预期寿命用于生命倒计时；性别会进入${botName}对你的认知。`}
         footer={
           <div className="flex w-full gap-2">
             <Button variant="ghost" className="flex-1" onClick={() => setProfileOpen(false)}>

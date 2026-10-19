@@ -213,7 +213,7 @@ export function createSeed(): BojiState {
     },
     settings: {
       model: 'step-5-preview',
-      botName: '小薄',
+      botName: 'biubiu',
       autoMem: true,
       webSearch: true,
       ttsVoice: 'cixingnansheng',
@@ -233,7 +233,7 @@ export function createSeed(): BojiState {
       {
         who: 'bot',
         html:
-          '早上好，阿晨 👋 我是<b>小薄</b>，你的 AI 掌舵 Agent。模型 <b>step-5-preview</b> 已挂载，长期记忆 7 条。<br><br>' +
+          '早上好，阿晨 👋 我是<b>biubiu</b>，你的 AI 掌舵 Agent。模型 <b>step-5-preview</b> 已挂载，长期记忆 7 条。<br><br>' +
           '昨天的数据我看完了：睡眠 7.5h 及格，饮水 2850ml 差一点，搏击 25 分钟 ✔。<br><br>' +
           '今天想从哪件事开始？',
         t: Date.now() - 12 * 3600 * 1000,

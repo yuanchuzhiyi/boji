@@ -5,6 +5,7 @@ import { invokeNative } from '@/shared/bridge'
 import { Button } from '@/shared/ui/Button'
 import { Dialog } from '@/shared/ui/Dialog'
 import { Input, Textarea } from '@/shared/ui/Input'
+import { VoiceInputButton } from '@/app/components/VoiceInputButton'
 import { useToast } from '@/shared/ui/Toast'
 import { LineLegend, SnapshotLineChart, type SnapshotLinePoint, type SnapshotLineSeries } from '@/shared/ui/charts'
 import { cn } from '@/shared/lib/cn'
@@ -46,6 +47,7 @@ export function HealthPage() {
   const [confirmBodyId, setConfirmBodyId] = useState<string | null>(null)
 
   const h = s.health
+  const botName = s.settings.botName || 'biubiu'
   const bodyList = [...s.body].sort((a, b) => a.ts - b.ts)
   const lastBody = bodyList[bodyList.length - 1]
   const prevBody = bodyList.length > 1 ? bodyList[bodyList.length - 2] : null
@@ -54,10 +56,10 @@ export function HealthPage() {
 
   async function analyzeDataUrl(dataUrl: string) {
     setAnalyzing(true)
-    setAnalyzeMeta('⏳ 小薄正在读报告… 0s')
+    setAnalyzeMeta(`⏳ ${botName}正在读报告… 0s`)
     try {
       const result = await analyzeReport(dataUrl, {
-        onWaiting: (seconds, chars) => setAnalyzeMeta(`⏳ 小薄正在读报告… ${seconds}s · 已接收 ${chars} 字${seconds >= 45 ? ' · 没卡住' : ''}`),
+        onWaiting: (seconds, chars) => setAnalyzeMeta(`⏳ ${botName}正在读报告… ${seconds}s · 已接收 ${chars} 字${seconds >= 45 ? ' · 没卡住' : ''}`),
       })
       mutate((draft) => {
         draft.health = { summary: result.summary, items: result.items, updatedAt: Date.now(), source: 'ai' }
@@ -85,7 +87,7 @@ export function HealthPage() {
       const url = res.tempFilePaths[0]
       if (!url) return
       setAnalyzing(true)
-      setAnalyzeMeta('⏳ 小薄正在读报告… 0s')
+      setAnalyzeMeta(`⏳ ${botName}正在读报告… 0s`)
       try {
         await analyzeDataUrl(await urlToCompressedDataUrl(url))
       } catch {
@@ -161,7 +163,7 @@ export function HealthPage() {
           <p className="text-caption leading-relaxed text-muted-foreground">
             还没有健康档案。
             <br />
-            上传一次体检报告让小薄总结，或手动录入你目前的身体状况。
+            上传一次体检报告让{botName}总结，或手动录入你目前的身体状况。
           </p>
         ) : (
           <>
@@ -290,20 +292,28 @@ export function HealthPage() {
         }
       >
         <div className="space-y-3">
-          <Textarea
-            rows={4}
-            label="身体状况总结"
-            value={summaryDraft}
-            onChange={(e) => setSummaryDraft(e.target.value)}
-            placeholder="例：整体尚可，主要有脂肪肝和尿酸偏高，需控糖控酒…"
-          />
-          <Textarea
-            rows={5}
-            label="异常 / 疾病清单（每行一项）"
-            value={itemsDraft}
-            onChange={(e) => setItemsDraft(e.target.value)}
-            placeholder={'轻度脂肪肝|肝|关注|B超提示\n尿酸偏高|代谢|关注|480'}
-          />
+          <div className="flex items-end gap-2">
+            <Textarea
+              rows={4}
+              label="身体状况总结"
+              value={summaryDraft}
+              onChange={(e) => setSummaryDraft(e.target.value)}
+              placeholder="例：整体尚可，主要有脂肪肝和尿酸偏高，需控糖控酒…"
+              className="flex-1"
+            />
+            <VoiceInputButton onResult={(text) => setSummaryDraft((prev) => (prev ? `${prev} ${text}` : text))} />
+          </div>
+          <div className="flex items-end gap-2">
+            <Textarea
+              rows={5}
+              label="异常 / 疾病清单（每行一项）"
+              value={itemsDraft}
+              onChange={(e) => setItemsDraft(e.target.value)}
+              placeholder={'轻度脂肪肝|肝|关注|B超提示\n尿酸偏高|代谢|关注|480'}
+              className="flex-1"
+            />
+            <VoiceInputButton onResult={(text) => setItemsDraft((prev) => (prev ? `${prev}\n${text}` : text))} />
+          </div>
         </div>
       </Dialog>
 

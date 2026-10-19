@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Plus, Search, X } from 'lucide-react'
 
 import { Button } from '@/shared/ui/Button'
+import { VoiceInputButton } from '@/app/components/VoiceInputButton'
 import { Dialog } from '@/shared/ui/Dialog'
 import { Input, Textarea } from '@/shared/ui/Input'
 import { useToast } from '@/shared/ui/Toast'
@@ -117,11 +118,11 @@ export function MemoryPage() {
 
       {/* 理解摘要 */}
       <section className="rounded-md border border-violet/30 bg-gradient-to-br from-violet-soft to-info-soft p-4">
-        <h2 className="mb-2 text-body font-semibold">{s.settings.botName || '小薄'}对你的当前理解</h2>
+        <h2 className="mb-2 text-body font-semibold">{s.settings.botName || 'biubiu'}对你的当前理解</h2>
         <p className="text-caption leading-relaxed text-surface-foreground [&_b]:text-primary">
           你正在追求<b>薄肌 + 搏击</b>双资产，睡眠与饮水是底线指标；决策风格偏<b className="text-info!">「先开图，再出兵」</b>，
           重大选择前要补足样本量；财富观认同<b className="text-orange!">「先自由，后财富」</b>，保持选择权优先于存款数字。
-          （本摘要由{s.settings.botName || '小薄'}根据 {s.memories.length} 条记忆生成）
+          （本摘要由{s.settings.botName || 'biubiu'}根据 {s.memories.length} 条记忆生成）
         </p>
       </section>
 
@@ -142,6 +143,7 @@ export function MemoryPage() {
             enterKeyHint="done"
             className="flex-1"
           />
+          <VoiceInputButton onResult={(text) => setDietText((prev) => (prev ? `${prev} ${text}` : text))} />
           <Button className="shrink-0" onClick={addDiet}>
             记一笔
           </Button>
@@ -192,6 +194,7 @@ export function MemoryPage() {
             enterKeyHint="done"
             className="flex-1"
           />
+          <VoiceInputButton onResult={(text) => setMemoText((prev) => (prev ? `${prev} ${text}` : text))} />
           <Button className="shrink-0" onClick={addMemo}>
             添加
           </Button>
@@ -316,14 +319,18 @@ export function MemoryPage() {
       </button>
 
       {/* 添加记忆弹层 */}
-      <Dialog open={addOpen} onClose={() => setAddOpen(false)} title="添加长期记忆" description="关于你的目标、习惯、偏好、关系——小薄会在决策时自动引用。">
-        <Textarea
-          rows={3}
-          value={newMem}
-          onChange={(e) => setNewMem(e.target.value)}
-          placeholder="例如：我对乳糖不耐，蛋白粉选分离乳清"
-          label="内容"
-        />
+      <Dialog open={addOpen} onClose={() => setAddOpen(false)} title="添加长期记忆" description={`关于你的目标、习惯、偏好、关系——${s.settings.botName || 'biubiu'}会在决策时自动引用。`}>
+        <div className="flex items-end gap-2">
+          <Textarea
+            rows={3}
+            value={newMem}
+            onChange={(e) => setNewMem(e.target.value)}
+            placeholder="例如：我对乳糖不耐，蛋白粉选分离乳清"
+            label="内容"
+            className="flex-1"
+          />
+          <VoiceInputButton onResult={(text) => setNewMem((prev) => (prev ? `${prev} ${text}` : text))} />
+        </div>
         <div className="mt-3">
           <p className="mb-1.5 text-caption font-medium text-muted-foreground">分类</p>
           <div className="flex flex-wrap gap-1.5">

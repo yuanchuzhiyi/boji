@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { Cpu, Hourglass, ImagePlus, Loader2, Mic, Send, Square, Volume2, X } from 'lucide-react'
+import { Cpu, Hourglass, ImagePlus, Send, Square, Volume2, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
-import { invokeNative, onNativeEvent, getBridgeMode } from '@/shared/bridge'
+import { invokeNative } from '@/shared/bridge'
+import { VoiceInputButton } from '@/app/components/VoiceInputButton'
 import { BotFace } from '@/shared/ui/BotFace'
 import { useToast } from '@/shared/ui/Toast'
-import { QUICKS, TARGETS, ensureDay, getState, mutate, useBoji } from '@/app/store/boji'
+import { TARGETS, ensureDay, getState, mutate, useBoji } from '@/app/store/boji'
 import { ModelPickerDialog } from '@/app/components/ModelPickerDialog'
-import { askHelm, describeApiError, transcribeAudio } from '@/app/lib/stepfun'
+import { askHelm, describeApiError } from '@/app/lib/stepfun'
 import { speak, stopSpeaking } from '@/app/lib/speech'
 import { applyLog, detect, noKeyNotice, respond } from '@/app/lib/script'
 import { esc, fmt, fmtTime } from '@/app/lib/text'
@@ -16,7 +17,7 @@ import { useLifeCountdown } from '@/app/lib/useLifeCountdown'
 import { cn } from '@/shared/lib/cn'
 
 /**
- * 对话页：机器人「小薄」的 AI 掌舵主界面。
+ * 对话页：机器人（默认 biubiu）的 AI 掌舵主界面。
  *
  * - 发送时先做本地意图识别（打卡 / 记忆先落数据，不依赖模型）；
  * - 已接入 Key：真实模型流式回答（思维链 / 正文分片、联网搜索工具循环、记忆自动提炼）；
@@ -31,21 +32,16 @@ export function ChatPage() {
   const [busy, setBusy] = useState(false)
   /** 待发送图片：full 送模型，thumb 入历史 */
   const [pendingImages, setPendingImages] = useState<Array<{ full: string; thumb: string }>>([])
-  /** 语音输入：录音中 / 识别中 */
-  const [recording, setRecording] = useState(false)
-  const [recordSecs, setRecordSecs] = useState(0)
-  const [transcribing, setTranscribing] = useState(false)
   /** 语音播报：正在播报的消息 key */
   const [speakingKey, setSpeakingKey] = useState<string | null>(null)
   const [streaming, setStreaming] = useState<{ html: string; searching?: string } | null>(null)
   const [modelSheet, setModelSheet] = useState(false)
   const keyNoticeShown = useRef(false)
   const abortRef = useRef<AbortController | null>(null)
-  const recordTimer = useRef<number | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  const botName = s.settings.botName || '小薄'
+  const botName = s.settings.botName || 'biubiu'
   const hasKey = Boolean(s.settings.apiKey)
 
   // 新消息 / 流式增量时滚到底
@@ -53,18 +49,6 @@ export function ChatPage() {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
   }, [s.chat.length, streaming?.html, busy])
-
-  // 录音到 60s 上限自动停：壳推 recordAudioStop 事件，取文件转写（主动stopRecordAudio 不发事件）
-  useEffect(() => {
-    let dispose: (() => void) | undefined
-    void onNativeEvent('recordAudioStop', (e) => {
-      void finishRecord(e.tempFilePath)
-    }).then((d) => {
-      dispose = d
-    })
-    return () => dispose?.()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   function headerStatus(): string {
     const d = ensureDay(s.data)
@@ -143,66 +127,6 @@ export function ChatPage() {
       abortRef.current = null
       setStreaming(null)
       setBusy(false)
-    }
-  }
-
-  /* ---------------- 语音输入（ASR） ---------------- */
-
-  function clearRecordUI() {
-    setRecording(false)
-    setRecordSecs(0)
-    if (recordTimer.current) {
-      window.clearInterval(recordTimer.current)
-      recordTimer.current = null
-    }
-  }
-
-  async function startRecord() {
-    if (!hasKey) {
-      toast({ title: '语音输入需要先接入 API', description: '去「我的 → API 接入」填入 Key', tone: 'warning' })
-      return
-    }
-    if (busy || transcribing) return
-    try {
-      // 16kHz 单声道 aac：识别够用、文件小；上限 60s，到点壳会自动停并推事件
-      await invokeNative('recordAudio', { duration: 60000, format: 'aac', sampleRate: 16000, numberOfChannels: 1 })
-      setRecording(true)
-      setRecordSecs(0)
-      recordTimer.current = window.setInterval(() => setRecordSecs((v) => v + 1), 1000)
-    } catch (err) {
-      const code = (err as { code?: string }).code
-      if (code === 'cancelled') return
-      if (getBridgeMode() === 'mock') {
-        toast({ title: '语音输入需要真机 App 壳', description: '预览环境没有麦克风桥接，装壳后即可用', tone: 'info' })
-      } else {
-        toast({ title: '无法开始录音', description: '请检查麦克风权限', tone: 'danger' })
-      }
-    }
-  }
-
-  async function stopRecord() {
-    try {
-      const res = await invokeNative('stopRecordAudio', undefined)
-      clearRecordUI()
-      await finishRecord(res.tempFilePath)
-    } catch {
-      clearRecordUI()
-      toast({ title: '录音太短或结束失败，请重试', tone: 'warning' })
-    }
-  }
-
-  async function finishRecord(filePath: string) {
-    if (!filePath) return
-    clearRecordUI()
-    setTranscribing(true)
-    try {
-      const text = await transcribeAudio(filePath)
-      setDraft((prev) => (prev ? `${prev} ${text}` : text))
-      inputRef.current?.focus()
-    } catch (err) {
-      toast({ title: '识别失败', description: (err as Error).message, tone: 'danger' })
-    } finally {
-      setTranscribing(false)
     }
   }
 
@@ -387,41 +311,23 @@ export function ChatPage() {
             <span className="shrink-0 text-caption text-muted-foreground">{pendingImages.length} 张待发送</span>
           </div>
         )}
-        <div className="no-scrollbar mb-2 flex gap-1.5 overflow-x-auto">
-          {QUICKS.map((q) => (
-            <button
-              key={q}
-              type="button"
-              onClick={() => void send(q.replace(/^[^ ]+ /, ''))}
-              disabled={busy}
-              className="min-h-tap shrink-0 rounded-full border border-border bg-surface-muted px-3 text-caption font-medium text-muted-foreground active:border-primary active:text-primary disabled:opacity-50"
-            >
-              {q}
-            </button>
-          ))}
-        </div>
         <div className="flex items-end gap-2">
           <button
             type="button"
             onClick={() => void pickImage()}
-            disabled={busy || recording || transcribing}
+            disabled={busy}
             aria-label="发送图片"
             className="flex size-11 shrink-0 items-center justify-center rounded-full border border-input bg-surface text-muted-foreground active:border-primary active:text-primary disabled:opacity-50"
           >
             <ImagePlus className="size-5" aria-hidden />
           </button>
-          <button
-            type="button"
-            onClick={() => (recording ? void stopRecord() : void startRecord())}
-            disabled={busy || transcribing}
-            aria-label={recording ? '停止录音并转写' : '语音输入'}
-            className={cn(
-              'flex size-11 shrink-0 items-center justify-center rounded-full border active:scale-95 disabled:opacity-50',
-              recording ? 'border-danger bg-danger/15 text-danger' : 'border-input bg-surface text-muted-foreground active:border-primary active:text-primary',
-            )}
-          >
-            {transcribing ? <Loader2 className="size-5 animate-spin" aria-hidden /> : recording ? <Square className="size-4" aria-hidden /> : <Mic className="size-5" aria-hidden />}
-          </button>
+          <VoiceInputButton
+            onResult={(text) => {
+              setDraft((prev) => (prev ? `${prev} ${text}` : text))
+              inputRef.current?.focus()
+            }}
+            disabled={busy}
+          />
           <textarea
             ref={inputRef}
             rows={1}
@@ -437,15 +343,9 @@ export function ChatPage() {
                 void send(draft)
               }
             }}
-            placeholder={
-              recording
-                ? `录音中 ${recordSecs}s · 再点一次麦克风结束`
-                : transcribing
-                  ? '正在识别语音…'
-                  : `跟${botName}说点什么…（打卡 / 记住我）`
-            }
+            placeholder={`跟${botName}说点什么…（打字 / 语音 / 图片都行）`}
             enterKeyHint="send"
-            disabled={busy || recording || transcribing}
+            disabled={busy}
             className="max-h-[100px] min-h-tap flex-1 resize-none rounded-lg border border-input bg-surface px-3.5 py-2.5 text-body text-surface-foreground placeholder:text-muted-foreground focus:border-primary"
           />
           <button

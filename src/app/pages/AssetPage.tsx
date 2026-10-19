@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/shared/ui/Button'
 import { Dialog } from '@/shared/ui/Dialog'
 import { Input } from '@/shared/ui/Input'
+import { VoiceInputButton } from '@/app/components/VoiceInputButton'
 import { useToast } from '@/shared/ui/Toast'
 import { LineLegend, SnapshotLineChart, type SnapshotLinePoint, type SnapshotLineSeries } from '@/shared/ui/charts'
 import { dstr, fmtMoney, mutate, parseAmount, uid, useBoji } from '@/app/store/boji'
@@ -279,7 +280,10 @@ function SnapshotForm({
           placeholder="如 100000 或 10万"
           inputMode="decimal"
         />
-        <Input label="备注（可选）" value={note} onChange={(e) => setNote(e.target.value)} placeholder="如：发完年终奖后" />
+        <div className="flex items-end gap-2">
+          <Input label="备注（可选）" value={note} onChange={(e) => setNote(e.target.value)} placeholder="如：发完年终奖后" className="flex-1" />
+          <VoiceInputButton onResult={(text) => setNote((prev) => (prev ? `${prev} ${text}` : text))} />
+        </div>
         {existing && (
           <Button
             variant="danger-ghost"

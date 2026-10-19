@@ -3,7 +3,7 @@ import { useId } from 'react'
 import { cn } from '@/shared/lib/cn'
 
 /**
- * 机器人「小薄」头像（薄肌计划的 AI 掌舵形象）。
+ * 机器人头像（默认名 biubiu）（薄肌计划的 AI 掌舵形象）。
  *
  * 顶栏 / 消息气泡 / 服务器状态卡共用同一个组件；`thinking` 时光晕呼吸，
  * 眼睛定期眨一下——两个动画都在 globals.css（prefers-reduced-motion 已全局降级）。

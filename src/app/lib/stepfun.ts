@@ -258,7 +258,7 @@ export function buildSystemPrompt(s: BojiState): string {
   const d = s.data[dstr()] ?? { water: 0, sleep: 0, fight: 0, gym: 0, create: 0 }
   const memTxt = memoryContext(s)
   return (
-    `你是「${s.settings.botName || '小薄'}」，薄肌计划 App 里的 AI 掌舵机器人，由阶跃星辰 StepCode（模型 ${s.settings.model}）驱动。\n` +
+    `你是「${s.settings.botName || 'biubiu'}」，薄肌计划 App 里的 AI 掌舵机器人，由阶跃星辰 StepCode（模型 ${s.settings.model}）驱动。\n` +
     `用户：${s.user.name}（主战场：${s.user.goal}，${s.user.gender || '性别未填'}，生日 ${s.user.birthday || '未填'}，预期寿命 ${s.user.lifespan || 80} 岁）。语气：朋友式、直接、不尬聊。\n\n` +
     `【理论底座 · 来自孙宇晨×邵艾伦访谈】\n` +
     '1. 搏击理论：薄肌是静态资产（体态/代谢/抗衰），搏击是动态神经资产（反应/抗压/冲突心态）\n' +
@@ -807,6 +807,42 @@ export async function analyzeReport(
 }
 
 /* ------------------------------- 语音：ASR / TTS（StepAudio 3） ------------------------------- */
+
+/** 内置官方音色（StepFun 文档实证的音色 ID；拉取失败时兜底） */
+export const BUILTIN_VOICES: Array<{ id: string; name: string }> = [
+  { id: 'cixingnansheng', name: '磁性强男声（默认）' },
+  { id: 'wenrounansheng', name: '温柔男声' },
+  { id: 'qingchunshaonv', name: '青春少女' },
+  { id: 'livelybreezy-female', name: '活力少女' },
+  { id: 'elegantgentle-female', name: '高雅女声' },
+]
+
+/**
+ * 拉取开放平台官方音色清单（GET /v1/audio/system_voices）。
+ * 依次尝试当前 TTS 模型与 step-tts-2；都失败时回退内置清单（合并去重）。
+ */
+export async function fetchSystemVoices(): Promise<Array<{ id: string; name: string }>> {
+  const s = getState()
+  if (!s.settings.apiKey) return BUILTIN_VOICES
+  const extra: Array<{ id: string; name: string }> = []
+  for (const model of ['stepaudio-3-tts', 'step-tts-2']) {
+    try {
+      const j = await getJson<{ voices?: string[]; 'voices-details'?: Record<string, { 'voice-name'?: string }> }>(
+        apiUrl(s.settings.apiBase, `/audio/system_voices?model=${model}`),
+        s.settings.apiKey,
+      )
+      for (const id of j.voices ?? []) {
+        if (!extra.some((v) => v.id === id) && !BUILTIN_VOICES.some((v) => v.id === id)) {
+          extra.push({ id, name: j['voices-details']?.[id]?.['voice-name'] || id })
+        }
+      }
+      if (extra.length) break
+    } catch {
+      /* 该模型不支持音色查询，试下一个 */
+    }
+  }
+  return [...BUILTIN_VOICES, ...extra]
+}
 
 /** 音频 URL（壳的虚拟 URL，同源）→ base64 */
 async function audioUrlToBase64(url: string): Promise<string> {
