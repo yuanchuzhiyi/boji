@@ -33,7 +33,7 @@ import {
   type ModelInfo,
   type PlanDay,
 } from '@/app/store/boji'
-import { esc, fmt, sourcesCard, srcTag, stripMarkers } from './text'
+import { esc, fmt, sourcesCard, stripMarkers } from './text'
 
 /* ------------------------------- 基础类型 ------------------------------- */
 
@@ -507,7 +507,7 @@ export async function askHelm(text: string, cb: AskCallbacks, signal?: AbortSign
       cb.onMemories?.(parsed.added.length)
     }
   }
-  return `${fmt(stripMarkers(finalText))}${srcTag(s.settings.model)}${sourcesCard(sources)}`
+  return `${fmt(stripMarkers(finalText))}${sourcesCard(sources)}`
 }
 
 /* ------------------------------- 模型目录 ------------------------------- */

@@ -320,7 +320,6 @@ export function ChatPage() {
             who={m.who}
             html={m.who === 'bot' ? m.html ?? '' : esc(m.text ?? '')}
             time={fmtTime(m.t)}
-            api={m.api}
             imgs={m.imgs}
             speaking={speakingKey === `${m.t}-${i}`}
             onSpeak={() => void speakMessage(`${m.t}-${i}`, m.html ?? '')}
@@ -481,7 +480,6 @@ function MessageBubble({
   who,
   html,
   time,
-  api,
   imgs,
   speaking,
   onSpeak,
@@ -490,7 +488,6 @@ function MessageBubble({
   who: 'bot' | 'user'
   html: string
   time: string
-  api?: boolean
   imgs?: string[]
   speaking?: boolean
   onSpeak?: () => void
@@ -532,10 +529,7 @@ function MessageBubble({
           dangerouslySetInnerHTML={{ __html: html }}
         />
         <div className="mt-1 flex items-center gap-2">
-          <span className="text-caption text-muted-foreground">
-            {time}
-            {api ? ' · API' : ''}
-          </span>
+          <span className="text-caption text-muted-foreground">{time}</span>
           {onSpeak && (
             <button
               type="button"

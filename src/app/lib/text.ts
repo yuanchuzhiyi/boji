@@ -30,11 +30,6 @@ export function fmt(s: unknown): string {
     .replace(/\n/g, '<br>')
 }
 
-/** 「API 实时」来源标记 */
-export function srcTag(model: string): string {
-  return `<span class="mt-2 inline-flex items-center gap-1 rounded-full border border-info/35 bg-info/10 px-2 py-0.5 text-caption text-info">⚡ ${esc(model)} · API 实时</span>`
-}
-
 /** 联网搜索来源卡片 */
 export function sourcesCard(list: Array<{ title: string; url: string; snippet: string }>): string {
   if (!list || !list.length) return ''
