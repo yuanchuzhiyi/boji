@@ -10,7 +10,7 @@ import { ModelPickerDialog } from '@/app/components/ModelPickerDialog'
 import { askHelm, describeApiError } from '@/app/lib/stepfun'
 import { applyLog, detect, noKeyNotice, respond } from '@/app/lib/script'
 import { esc, fmt, fmtTime } from '@/app/lib/text'
-import { urlToCompressedDataUrl } from '@/app/lib/image'
+import { urlToBothDataUrls } from '@/app/lib/image'
 import { useLifeCountdown } from '@/app/lib/useLifeCountdown'
 
 /**
@@ -27,7 +27,8 @@ export function ChatPage() {
   const life = useLifeCountdown()
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
-  const [pendingImage, setPendingImage] = useState<string | null>(null)
+  /** 待发送图片：full 送模型，thumb 入历史 */
+  const [pendingImages, setPendingImages] = useState<Array<{ full: string; thumb: string }>>([])
   const [streaming, setStreaming] = useState<{ html: string; searching?: string } | null>(null)
   const [modelSheet, setModelSheet] = useState(false)
   const keyNoticeShown = useRef(false)
@@ -55,16 +56,16 @@ export function ChatPage() {
 
   async function send(raw: string) {
     const text = raw.trim()
-    const image = pendingImage
-    if ((!text && !image) || busy) return
+    const images = pendingImages
+    if ((!text && !images.length) || busy) return
     setDraft('')
-    setPendingImage(null)
+    setPendingImages([])
     if (inputRef.current) inputRef.current.style.height = 'auto'
 
-    // 用户消息落库 + 本地意图识别（打卡 / 记忆先落数据）
-    const shown = text || '（一张图片）'
+    // 用户消息落库（缩略图进历史）+ 本地意图识别（打卡 / 记忆先落数据）
+    const shown = text || (images.length > 1 ? `（${images.length} 张图片）` : '（一张图片）')
     mutate((draft) => {
-      draft.chat.push({ who: 'user', text: shown, t: Date.now() })
+      draft.chat.push({ who: 'user', text: shown, imgs: images.map((x) => x.thumb), t: Date.now() })
     })
     const it = detect(shown)
     const memNote = applyLog(it)
@@ -90,7 +91,7 @@ export function ChatPage() {
           },
           controller.signal,
           memNote ?? undefined,
-          image ?? undefined,
+          images.length ? images.map((x) => x.full) : undefined,
         )
       } else {
         // 未接入 Key：本地剧本引擎 + 接入引导（只提醒一次）
@@ -119,7 +120,7 @@ export function ChatPage() {
     }
   }
 
-  /** 选图（壳的相册 / 拍照）→ 压缩成 JPEG dataURL 暂存，随下一条消息发送 */
+  /** 选图（壳的相册 / 拍照，最多 9 张）→ 压缩成「全清图 + 缩略图」暂存，随下一条消息发送 */
   async function pickImage() {
     if (!hasKey) {
       toast({ title: '发送图片需要先接入 API', description: '去「我的 → API 接入」填入 Key', tone: 'warning' })
@@ -127,10 +128,12 @@ export function ChatPage() {
     }
     if (busy) return
     try {
-      const res = await invokeNative('chooseImage', { count: 1, sourceType: ['album', 'camera'] })
-      const url = res.tempFilePaths[0]
-      if (!url) return
-      setPendingImage(await urlToCompressedDataUrl(url))
+      const res = await invokeNative('chooseImage', { count: 9, sourceType: ['album', 'camera'] })
+      const urls = res.tempFilePaths.slice(0, 9 - pendingImages.length)
+      if (!urls.length) return
+      const picked = await Promise.all(urls.map((url) => urlToBothDataUrls(url)))
+      setPendingImages((prev) => [...prev, ...picked].slice(0, 9))
+      if (picked.length < urls.length) toast({ title: '最多附带 9 张图片', tone: 'info' })
     } catch (err) {
       const code = (err as { code?: string }).code
       if (code !== 'cancelled') toast({ title: '选择图片失败，请重试', tone: 'danger' })
@@ -212,7 +215,14 @@ export function ChatPage() {
         }}
       >
         {s.chat.map((m, i) => (
-          <MessageBubble key={`${m.t}-${i}`} who={m.who} html={m.who === 'bot' ? m.html ?? '' : esc(m.text ?? '')} time={fmtTime(m.t)} api={m.api} />
+          <MessageBubble
+            key={`${m.t}-${i}`}
+            who={m.who}
+            html={m.who === 'bot' ? m.html ?? '' : esc(m.text ?? '')}
+            time={fmtTime(m.t)}
+            api={m.api}
+            imgs={m.imgs}
+          />
         ))}
 
         {/* 流式进行中 / 正在输入 */}
@@ -254,21 +264,25 @@ export function ChatPage() {
 
       {/* 输入区 */}
       <div className="shrink-0 border-t border-border bg-surface/95 px-3 pb-2 pt-2 backdrop-blur">
-        {/* 待发送图片预览：压缩后暂存，随下一条消息一起发出（不入库） */}
-        {pendingImage && (
+        {/* 待发送图片预览：压缩后暂存（最多 9 张），随下一条消息一起发出 */}
+        {pendingImages.length > 0 && (
           <div className="mb-2 flex items-center gap-2.5 rounded-md border border-border bg-surface p-2">
-            <img src={pendingImage} alt="待发送的图片" className="size-12 shrink-0 rounded-sm object-cover" />
-            <span className="min-w-0 flex-1 text-caption text-muted-foreground">
-              图片已就绪，随下一条消息一起发给{botName}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPendingImage(null)}
-              aria-label="移除图片"
-              className="-mr-1 flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground active:bg-accent active:text-danger"
-            >
-              <X className="size-4" aria-hidden />
-            </button>
+            <div className="no-scrollbar flex flex-1 gap-1.5 overflow-x-auto">
+              {pendingImages.map((img, i) => (
+                <div key={i} className="relative shrink-0">
+                  <img src={img.thumb} alt={`待发送的图片 ${i + 1}`} className="size-12 rounded-sm object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setPendingImages((prev) => prev.filter((_, j) => j !== i))}
+                    aria-label={`移除图片 ${i + 1}`}
+                    className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full border border-border bg-surface text-muted-foreground shadow-sm active:text-danger"
+                  >
+                    <X className="size-3" aria-hidden />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <span className="shrink-0 text-caption text-muted-foreground">{pendingImages.length} 张待发送</span>
           </div>
         )}
         <div className="no-scrollbar mb-2 flex gap-1.5 overflow-x-auto">
@@ -331,15 +345,38 @@ export function ChatPage() {
   )
 }
 
-/** 单条消息气泡（bot 带头像；user 右侧主色） */
-function MessageBubble({ who, html, time, api }: { who: 'bot' | 'user'; html: string; time: string; api?: boolean }) {
+/** 点击历史图片 → 壳的大图查看器（真机）/ DOM 覆盖层（预览 mock） */
+async function previewImages(imgs: string[], current: string) {
+  try {
+    await invokeNative('previewImage', { urls: imgs, current })
+  } catch {
+    /* 查看失败不打断对话 */
+  }
+}
+
+/** 单条消息气泡（bot 带头像；user 右侧主色，可带图片缩略图） */
+function MessageBubble({ who, html, time, api, imgs }: { who: 'bot' | 'user'; html: string; time: string; api?: boolean; imgs?: string[] }) {
   if (who === 'user') {
     return (
       <div className="flex animate-msg-in flex-col items-end">
-        <div
-          className="max-w-[85%] rounded-md rounded-tr-sm bg-primary px-3 py-2 text-body font-medium leading-relaxed text-primary-foreground"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
+        <div className="max-w-[85%] rounded-md rounded-tr-sm bg-primary px-3 py-2 text-body font-medium leading-relaxed text-primary-foreground">
+          {imgs && imgs.length > 0 && (
+            <div className="mb-1.5 flex flex-wrap justify-end gap-1.5">
+              {imgs.map((src, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => void previewImages(imgs, src)}
+                  aria-label={`查看图片 ${i + 1}`}
+                  className="size-16 shrink-0 overflow-hidden rounded-sm active:opacity-80"
+                >
+                  <img src={src} alt={`对话图片 ${i + 1}`} className="size-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+          <div dangerouslySetInnerHTML={{ __html: html }} />
+        </div>
         <span className="mt-1 text-caption text-muted-foreground">{time}</span>
       </div>
     )

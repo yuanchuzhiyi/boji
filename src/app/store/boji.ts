@@ -102,6 +102,8 @@ export interface ChatMessage {
   html?: string
   /** user 消息：纯文本 */
   text?: string
+  /** user 消息附带的图片缩略图（dataURL；对话历史里回看用，发送时另有全清图） */
+  imgs?: string[]
   t: number
   /** 是否来自真实 API（展示「API 实时」标记） */
   api?: boolean
@@ -271,7 +273,21 @@ const listeners = new Set<() => void>()
 
 function persist(): void {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify(state))
+    let json = JSON.stringify(state)
+    // localStorage 配额约 5MB：超限时从最早的消息开始剥掉历史图片（缩略图），
+    // 保证状态本身能落盘——不能因为图片把整个存储搞爆导致后续都不保存
+    if (json.length > 4_000_000) {
+      const draft: BojiState = { ...state }
+      for (const m of draft.chat) {
+        if (json.length <= 4_000_000) break
+        if (m.imgs?.length) {
+          delete m.imgs
+          json = JSON.stringify(draft)
+        }
+      }
+      state = draft
+    }
+    localStorage.setItem(LS_KEY, json)
   } catch {
     /* 存储满 / 隐私模式：静默失败，内存态继续可用 */
   }
