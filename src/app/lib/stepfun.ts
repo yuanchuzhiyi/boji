@@ -340,8 +340,8 @@ interface ChatMessageInput {
   tool_call_id?: string
 }
 
-/** 组装请求消息：系统提示 + 最近 16 条历史 + 本轮输入 */
-export function buildMessages(s: BojiState, text: string, memNote?: string): ChatMessageInput[] {
+/** 组装请求消息：系统提示 + 最近 16 条历史 + 本轮输入（可带图片，多模态） */
+export function buildMessages(s: BojiState, text: string, memNote?: string, imageUrl?: string): ChatMessageInput[] {
   const msgs: ChatMessageInput[] = [{ role: 'system', content: buildSystemPrompt(s) }]
   const hist = s.chat.slice(-16).map((m): ChatMessageInput => {
     if (m.who === 'bot') {
@@ -353,7 +353,18 @@ export function buildMessages(s: BojiState, text: string, memNote?: string): Cha
   if (memNote) {
     msgs.push({ role: 'system', content: `（系统提示：用户刚说的「${memNote}」已被写入长期记忆库，请确认已记住）` })
   }
-  msgs.push({ role: 'user', content: text })
+  if (imageUrl) {
+    // 多模态消息：文本 + 图片（体检报告 / 随手拍的餐食 / 动作纠错都走这条）
+    msgs.push({
+      role: 'user',
+      content: [
+        { type: 'text', text },
+        { type: 'image_url', image_url: { url: imageUrl } },
+      ],
+    })
+  } else {
+    msgs.push({ role: 'user', content: text })
+  }
   return msgs
 }
 
@@ -420,9 +431,10 @@ export async function webSearch(query: string, n = 5): Promise<SearchSource[]> {
 /**
  * 一次完整的「AI 掌舵」回答：流式输出 + 联网搜索工具循环（最多两轮）+ 记忆提炼入库。
  * memNote：本轮刚被本地写入记忆的文本（进系统提示，让模型确认已记住）。
+ * imageUrl：本轮附带的图片（压缩后的 JPEG dataURL），与文本一起作为多模态消息发出。
  * 返回最终展示用 HTML（含来源卡片）。
  */
-export async function askHelm(text: string, cb: AskCallbacks, signal?: AbortSignal, memNote?: string): Promise<string> {
+export async function askHelm(text: string, cb: AskCallbacks, signal?: AbortSignal, memNote?: string, imageUrl?: string): Promise<string> {
   const s = getState()
   const url = apiUrl(s.settings.apiBase, '/chat/completions')
   const sources: SearchSource[] = []
@@ -473,7 +485,7 @@ export async function askHelm(text: string, cb: AskCallbacks, signal?: AbortSign
     return round(next, depth + 1)
   }
 
-  const messages = buildMessages(s, text, memNote)
+  const messages = buildMessages(s, text, memNote, imageUrl)
   const finalText = await round(messages, 0)
 
   // 记忆提炼：[[MEMORY:…]] 标记行自动入库（受「自动记忆提取」开关控制）

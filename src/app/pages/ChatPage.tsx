@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { Cpu, Hourglass, Send } from 'lucide-react'
+import { Cpu, Hourglass, ImagePlus, Send, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
+import { invokeNative } from '@/shared/bridge'
 import { BotFace } from '@/shared/ui/BotFace'
 import { useToast } from '@/shared/ui/Toast'
 import { QUICKS, TARGETS, ensureDay, getState, mutate, useBoji } from '@/app/store/boji'
@@ -9,6 +10,7 @@ import { ModelPickerDialog } from '@/app/components/ModelPickerDialog'
 import { askHelm, describeApiError } from '@/app/lib/stepfun'
 import { applyLog, detect, noKeyNotice, respond } from '@/app/lib/script'
 import { esc, fmt, fmtTime } from '@/app/lib/text'
+import { urlToCompressedDataUrl } from '@/app/lib/image'
 import { useLifeCountdown } from '@/app/lib/useLifeCountdown'
 
 /**
@@ -25,6 +27,7 @@ export function ChatPage() {
   const life = useLifeCountdown()
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
+  const [pendingImage, setPendingImage] = useState<string | null>(null)
   const [streaming, setStreaming] = useState<{ html: string; searching?: string } | null>(null)
   const [modelSheet, setModelSheet] = useState(false)
   const keyNoticeShown = useRef(false)
@@ -52,15 +55,18 @@ export function ChatPage() {
 
   async function send(raw: string) {
     const text = raw.trim()
-    if (!text || busy) return
+    const image = pendingImage
+    if ((!text && !image) || busy) return
     setDraft('')
+    setPendingImage(null)
     if (inputRef.current) inputRef.current.style.height = 'auto'
 
-    // 1) 用户消息落库 + 本地意图识别（打卡 / 记忆先落数据）
+    // 用户消息落库 + 本地意图识别（打卡 / 记忆先落数据）
+    const shown = text || '（一张图片）'
     mutate((draft) => {
-      draft.chat.push({ who: 'user', text, t: Date.now() })
+      draft.chat.push({ who: 'user', text: shown, t: Date.now() })
     })
-    const it = detect(text)
+    const it = detect(shown)
     const memNote = applyLog(it)
 
     setBusy(true)
@@ -70,10 +76,10 @@ export function ChatPage() {
     try {
       let html: string
       if (hasKey) {
-        // 2) 已接入 Key：真实模型（流式 + 工具循环 + 记忆提炼）
+        // 已接入 Key：真实模型（流式 + 工具循环 + 记忆提炼；有图时走多模态消息）
         let acc = ''
         html = await askHelm(
-          text,
+          shown,
           {
             onContent: (chunk) => {
               acc += chunk
@@ -84,11 +90,12 @@ export function ChatPage() {
           },
           controller.signal,
           memNote ?? undefined,
+          image ?? undefined,
         )
       } else {
-        // 3) 未接入 Key：本地剧本引擎 + 接入引导（只提醒一次）
+        // 未接入 Key：本地剧本引擎 + 接入引导（只提醒一次）
         await new Promise((r) => setTimeout(r, 350))
-        html = respond(getState(), text, it)
+        html = respond(getState(), shown, it)
         if (!keyNoticeShown.current) {
           keyNoticeShown.current = true
           html = `${noKeyNotice(s.settings.model)}<br><br>${html}`
@@ -109,6 +116,24 @@ export function ChatPage() {
       abortRef.current = null
       setStreaming(null)
       setBusy(false)
+    }
+  }
+
+  /** 选图（壳的相册 / 拍照）→ 压缩成 JPEG dataURL 暂存，随下一条消息发送 */
+  async function pickImage() {
+    if (!hasKey) {
+      toast({ title: '发送图片需要先接入 API', description: '去「我的 → API 接入」填入 Key', tone: 'warning' })
+      return
+    }
+    if (busy) return
+    try {
+      const res = await invokeNative('chooseImage', { count: 1, sourceType: ['album', 'camera'] })
+      const url = res.tempFilePaths[0]
+      if (!url) return
+      setPendingImage(await urlToCompressedDataUrl(url))
+    } catch (err) {
+      const code = (err as { code?: string }).code
+      if (code !== 'cancelled') toast({ title: '选择图片失败，请重试', tone: 'danger' })
     }
   }
 
@@ -229,6 +254,23 @@ export function ChatPage() {
 
       {/* 输入区 */}
       <div className="shrink-0 border-t border-border bg-surface/95 px-3 pb-2 pt-2 backdrop-blur">
+        {/* 待发送图片预览：压缩后暂存，随下一条消息一起发出（不入库） */}
+        {pendingImage && (
+          <div className="mb-2 flex items-center gap-2.5 rounded-md border border-border bg-surface p-2">
+            <img src={pendingImage} alt="待发送的图片" className="size-12 shrink-0 rounded-sm object-cover" />
+            <span className="min-w-0 flex-1 text-caption text-muted-foreground">
+              图片已就绪，随下一条消息一起发给{botName}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPendingImage(null)}
+              aria-label="移除图片"
+              className="-mr-1 flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground active:bg-accent active:text-danger"
+            >
+              <X className="size-4" aria-hidden />
+            </button>
+          </div>
+        )}
         <div className="no-scrollbar mb-2 flex gap-1.5 overflow-x-auto">
           {QUICKS.map((q) => (
             <button
@@ -243,6 +285,15 @@ export function ChatPage() {
           ))}
         </div>
         <div className="flex items-end gap-2">
+          <button
+            type="button"
+            onClick={() => void pickImage()}
+            disabled={busy}
+            aria-label="发送图片"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full border border-input bg-surface text-muted-foreground active:border-primary active:text-primary disabled:opacity-50"
+          >
+            <ImagePlus className="size-5" aria-hidden />
+          </button>
           <textarea
             ref={inputRef}
             rows={1}
